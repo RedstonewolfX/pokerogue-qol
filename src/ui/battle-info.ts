@@ -68,6 +68,8 @@ export default class BattleInfo extends Phaser.GameObjects.Container {
   private statNumbers: Phaser.GameObjects.Sprite[];
 
   public flyoutMenu?: BattleFlyout;
+  
+  private teamIcons: Phaser.GameObjects.Sprite[];
 
   constructor(scene: Phaser.Scene, x: number, y: number, player: boolean) {
     super(scene, x, y);
@@ -112,6 +114,17 @@ export default class BattleInfo extends Phaser.GameObjects.Container {
       this.ownedIcon.setOrigin(0, 0);
       this.ownedIcon.setPositionRelative(this.nameText, 0, 11.75);
       this.add(this.ownedIcon);
+
+      this.teamIcons = new Array(6);
+
+      for (var ballindex = 0; ballindex < 6; ballindex++) {
+        this.teamIcons[ballindex] = this.scene.add.sprite(0, 0, "pb_tray_ball", "empty")
+        this.teamIcons[ballindex].setName("pb_teamball_" + ballindex);
+        this.teamIcons[ballindex].setVisible(false);
+        this.teamIcons[ballindex].setOrigin(0, 0);
+        this.teamIcons[ballindex].setPositionRelative(this.nameText, 6 * ballindex, 11.75);
+        this.add(this.teamIcons[ballindex]);
+      }
 
       this.championRibbon = this.scene.add.sprite(0, 0, "champion_ribbon");
       this.championRibbon.setName("icon_champion_ribbon");
@@ -336,6 +349,13 @@ export default class BattleInfo extends Phaser.GameObjects.Container {
           this.championRibbon.setVisible(true);
         }
       }
+      if (pokemon.hasTrainer()) {
+        this.ownedIcon.setVisible(false);
+        this.championRibbon.setVisible(false);
+        for (var i = 0; i < this.teamIcons.length; i++) {
+          this.teamIcons[i].setVisible(true)
+        }
+      }
 
       // Check if Player owns all genders and forms of the Pokemon
       const missingDexAttrs = ((dexEntry.caughtAttr & opponentPokemonDexAttr) < opponentPokemonDexAttr);
@@ -536,6 +556,11 @@ export default class BattleInfo extends Phaser.GameObjects.Container {
 
         if (!this.player && this.ownedIcon.visible) {
           this.ownedIcon.setAlpha(this.statusIndicator.visible ? 0 : 1);
+        }
+        for (var i = 0; i < this.teamIcons.length; i++) {
+          if (!this.player && this.teamIcons[i].visible) {
+            this.teamIcons[i].setAlpha(this.statusIndicator.visible ? 0 : 1);
+          }
         }
       }
 

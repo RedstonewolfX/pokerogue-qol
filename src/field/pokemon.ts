@@ -108,8 +108,19 @@ export default abstract class Pokemon extends Phaser.GameObjects.Container {
 
   private shinySparkle: Phaser.GameObjects.Sprite;
 
+  /**
+   * Flagged as True if this Pokémon has been seen in battle before.
+   */
+  public usedInBattle: boolean;
+  /**
+   * The BattleScene that this Pokémon is a part of.
+   */
+  public gamescene: BattleScene;
+
   constructor(scene: BattleScene, x: number, y: number, species: PokemonSpecies, level: integer, abilityIndex?: integer, formIndex?: integer, gender?: Gender, shiny?: boolean, variant?: Variant, ivs?: integer[], nature?: Nature, dataSource?: Pokemon | PokemonData) {
     super(scene, x, y);
+
+    this.gamescene = scene;
 
     if (!species.isObtainable() && this.isPlayer()) {
       throw `Cannot create a player Pokemon for species '${species.getName(formIndex)}'`;

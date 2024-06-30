@@ -34,9 +34,10 @@ import { ChallengeAchv, HealAchv, LevelAchv, achvs } from "./system/achv";
 import { TrainerSlot, trainerConfigs } from "./data/trainer-config";
 import { EggHatchPhase } from "./egg-hatch-phase";
 import { Egg } from "./data/egg";
+import PokemonData from "./system/pokemon-data"
 import { vouchers } from "./system/voucher";
 import { clientSessionId, loggedInUser, updateUserInfo } from "./account";
-import { SessionSaveData } from "./system/game-data";
+import { SessionSaveData, decrypt } from "./system/game-data";
 import { addPokeballCaptureStars, addPokeballOpenParticles } from "./field/anims";
 import { SpeciesFormChangeActiveTrigger, SpeciesFormChangeManualTrigger, SpeciesFormChangeMoveLearnedTrigger, SpeciesFormChangePostMoveTrigger, SpeciesFormChangePreMoveTrigger } from "./data/pokemon-forms";
 import { battleSpecDialogue, getCharVariantFromDialogue, miscDialogue } from "./data/dialogue";
@@ -65,8 +66,144 @@ import { Moves } from "#enums/moves";
 import { PlayerGender } from "#enums/player-gender";
 import { Species } from "#enums/species";
 import { TrainerType } from "#enums/trainer-type";
+import TrainerData from "./system/trainer-data";
+import PersistentModifierData from "./system/modifier-data";
+import ArenaData from "./system/arena-data";
+import ChallengeData from "./system/challenge-data";
+import { Challenges } from "./enums/challenges"
 
 const { t } = i18next;
+
+export function parseSlotData(slotId: integer): SessionSaveData {
+  var S = localStorage.getItem(`sessionData${slotId ? slotId : ""}_${loggedInUser.username}`)
+  if (S == null) {
+    // No data in this slot
+    return undefined;
+  }
+  var dataStr = decrypt(S, true)
+  var Save = JSON.parse(dataStr, (k: string, v: any) => {
+    /*const versions = [ scene.game.config.gameVersion, sessionData.gameVersion || '0.0.0' ];
+
+    if (versions[0] !== versions[1]) {
+      const [ versionNumbers, oldVersionNumbers ] = versions.map(ver => ver.split('.').map(v => parseInt(v)));
+    }*/
+
+    if (k === "party" || k === "enemyParty") {
+      const ret: PokemonData[] = [];
+      if (v === null) {
+        v = [];
+      }
+      for (const pd of v) {
+        ret.push(new PokemonData(pd));
+      }
+      return ret;
+    }
+
+    if (k === "trainer") {
+      return v ? new TrainerData(v) : null;
+    }
+
+    if (k === "modifiers" || k === "enemyModifiers") {
+      const player = k === "modifiers";
+      const ret: PersistentModifierData[] = [];
+      if (v === null) {
+        v = [];
+      }
+      for (const md of v) {
+        if (md?.className === "ExpBalanceModifier") { // Temporarily limit EXP Balance until it gets reworked
+          md.stackCount = Math.min(md.stackCount, 4);
+        }
+        if (md instanceof EnemyAttackStatusEffectChanceModifier && md.effect === StatusEffect.FREEZE || md.effect === StatusEffect.SLEEP) {
+          continue;
+        }
+        ret.push(new PersistentModifierData(md, player));
+      }
+      return ret;
+    }
+
+    if (k === "arena") {
+      return new ArenaData(v);
+    }
+
+    if (k === "challenges") {
+      const ret: ChallengeData[] = [];
+      if (v === null) {
+        v = [];
+      }
+      for (const c of v) {
+        ret.push(new ChallengeData(c));
+      }
+      return ret;
+    }
+
+    return v;
+  }) as SessionSaveData;
+  Save.slot = slotId
+  Save.description = slotId + " - "
+  var challengeParts: ChallengeData[] = new Array(5)
+  var nameParts: string[] = new Array(5)
+  if (Save.challenges != undefined) {
+    for (var i = 0; i < Save.challenges.length; i++) {
+      switch (Save.challenges[i].id) {
+        case Challenges.SINGLE_TYPE:
+          challengeParts[0] = Save.challenges[i]
+          nameParts[1] = Save.challenges[i].toChallenge().getValue()
+          break;
+        case Challenges.SINGLE_GENERATION:
+          challengeParts[1] = Save.challenges[i]
+          nameParts[0] = "Gen " + Save.challenges[i].value
+          break;
+        case Challenges.LOWER_MAX_STARTER_COST:
+          challengeParts[2] = Save.challenges[i]
+          nameParts[3] = (10 - challengeParts[0].value) + "cost"
+          break;
+        case Challenges.LOWER_STARTER_POINTS:
+          challengeParts[3] = Save.challenges[i]
+          nameParts[4] = (10 - challengeParts[0].value) + "pt"
+          break;
+        case Challenges.FRESH_START:
+          challengeParts[4] = Save.challenges[i]
+          nameParts[2] = "FS"
+          break;
+      }
+    }
+  }
+  for (var i = 0; i < challengeParts.length; i++) {
+    if (challengeParts[i] == undefined || challengeParts[i] == null) {
+      challengeParts.splice(i, 1)
+      i--
+    }
+  }
+  for (var i = 0; i < nameParts.length; i++) {
+    if (nameParts[i] == undefined || nameParts[i] == null || nameParts[i] == "") {
+      nameParts.splice(i, 1)
+      i--
+    }
+  }
+  if (challengeParts.length == 1) {
+    switch (challengeParts[0].id) {
+      case Challenges.SINGLE_TYPE:
+        Save.description += "Mono " + challengeParts[0].toChallenge().getValue()
+        break;
+      case Challenges.SINGLE_GENERATION:
+        Save.description += "Gen " + challengeParts[0].value
+        break;
+      case Challenges.LOWER_MAX_STARTER_COST:
+        Save.description += "Max cost " + (10 - challengeParts[0].value)
+        break;
+      case Challenges.LOWER_STARTER_POINTS:
+        Save.description += (10 - challengeParts[0].value) + "-point"
+        break;
+      case Challenges.FRESH_START:
+        Save.description += "Fresh Start"
+        break;
+    }
+  } else {
+    Save.description += nameParts.join(" ")
+  }
+  Save.description += " (" + getBiomeName(Save.arena.biome) + " " + Save.waveIndex + ")"
+  return Save;
+}
 
 export class LoginPhase extends Phase {
   private showText: boolean;
@@ -198,6 +335,18 @@ export class TitlePhase extends Phase {
     });
   }
 
+  getLastSave(): SessionSaveData {
+    var saves: Array<Array<any>> = [];
+    for (var i = 0; i < 5; i++) {
+      var s = parseSlotData(i);
+      if (s != undefined) {
+        saves.push([i, s, s.timestamp]);
+      }
+    }
+    saves.sort((a, b): integer => {return b[2] - a[2]})
+    return saves[0][1]
+  }
+
   showOptions(): void {
     const options: OptionSelectItem[] = [];
     if (loggedInUser.lastSessionSlot > -1) {
@@ -208,6 +357,16 @@ export class TitlePhase extends Phase {
           return true;
         }
       });
+    }
+    var lastsave = this.getLastSave();
+    if (lastsave != undefined) {
+      options.push({
+        label: (this.getLastSave().description ? this.getLastSave().description : "[???]"),
+        handler: () => {
+          this.loadSaveSlot(this.getLastSave().slot);
+          return true;
+        }
+      })
     }
     options.push({
       label: i18next.t("menu:newGame"),
