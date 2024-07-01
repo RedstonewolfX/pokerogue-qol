@@ -2289,7 +2289,7 @@ export class ExtraModifierModifier extends PersistentModifier {
   }
 
   getMaxStackCount(scene: BattleScene): integer {
-    return 3;
+    return 5;
   }
 }
 

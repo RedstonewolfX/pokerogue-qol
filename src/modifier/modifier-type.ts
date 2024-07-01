@@ -1165,7 +1165,7 @@ export const modifierTypes = {
 
   RARE_CANDY: () => new PokemonLevelIncrementModifierType("modifierType:ModifierType.RARE_CANDY", "rare_candy", 1),
   RARER_CANDY: () => new AllPokemonLevelIncrementModifierType("modifierType:ModifierType.RARER_CANDY", "rarer_candy"),
-  RAREST_CANDY: () => new PokemonLevelIncrementModifierType("modifierType:ModifierType.RAREST_CANDY", "rarer_candy", 1),
+  RAREST_CANDY: () => new PokemonLevelIncrementModifierType("modifierType:ModifierType.RAREST_CANDY", "rarer_candy", 25),
 
   EVOLUTION_ITEM: () => new EvolutionItemModifierTypeGenerator(false),
   RARE_EVOLUTION_ITEM: () => new EvolutionItemModifierTypeGenerator(true),
