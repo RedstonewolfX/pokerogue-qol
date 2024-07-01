@@ -2057,8 +2057,6 @@ export class TurnInitPhase extends FieldPhase {
         } else {
           pokemon.usedInBattle = true;
         }
-
-        pokemon.refresh();
         pokemon.resetTurnData();
 
         this.scene.pushPhase(pokemon.isPlayer() ? new CommandPhase(this.scene, i) : new EnemyCommandPhase(this.scene, i - BattlerIndex.ENEMY));
@@ -2652,11 +2650,6 @@ export class TurnEndPhase extends FieldPhase {
 export class BattleEndPhase extends BattlePhase {
   start() {
     super.start();
-    
-    for (var i = 0; i < this.scene.getParty().length; i++) {
-      this.scene.getParty()[i].refresh()
-    }
-    this.scene.updateFieldScale();
 
     this.scene.currentBattle.addBattleScore(this.scene);
 

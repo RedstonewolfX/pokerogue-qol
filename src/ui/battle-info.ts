@@ -851,7 +851,6 @@ export default class BattleInfo extends Phaser.GameObjects.Container {
               playedSound2 = true;
               (this.scene as BattleScene).playSound("level_up");
             }
-            pokemon.refresh()
             this.setLevel(this.lastLevel);
             this.scene.time.delayedCall(500 * levelDurationMultiplier, () => {
               this.expMaskRect.x = 0;
@@ -859,7 +858,6 @@ export default class BattleInfo extends Phaser.GameObjects.Container {
             });
             return;
           }
-          pokemon.refresh();
           resolve();
         }
       });
