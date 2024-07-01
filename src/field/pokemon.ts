@@ -93,7 +93,7 @@ export default abstract class Pokemon extends Phaser.GameObjects.Container {
   public fusionVariant: Variant;
   public fusionGender: Gender;
   public fusionLuck: integer;
-
+  
   private summonDataPrimer: PokemonSummonData;
 
   public summonData: PokemonSummonData;
