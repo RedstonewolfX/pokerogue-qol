@@ -252,6 +252,8 @@ export default class BattleScene extends SceneBase {
 
   public eventManager: TimedEventManager;
 
+  public scaling: boolean = false;
+
   /**
    * Allows subscribers to listen for events
    *
@@ -1170,6 +1172,7 @@ export default class BattleScene extends SceneBase {
         .map(p => p.getSpriteScale())
         .reduce((highestScale: number, scale: number) => highestScale = Math.max(scale, highestScale), 0), 0.7) * 40
       ) / 40;
+      if (this.field.scale == fieldScale) resolve();
       this.setFieldScale(fieldScale).then(() => resolve());
     });
   }

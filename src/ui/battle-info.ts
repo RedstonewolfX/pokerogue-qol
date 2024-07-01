@@ -68,6 +68,9 @@ export default class BattleInfo extends Phaser.GameObjects.Container {
   private statNumbers: Phaser.GameObjects.Sprite[];
 
   public flyoutMenu?: BattleFlyout;
+  
+  private teamIcons: Phaser.GameObjects.Sprite[];
+  private teamIconOver: Phaser.GameObjects.Sprite[];
 
   constructor(scene: Phaser.Scene, x: number, y: number, player: boolean) {
     super(scene, x, y);
@@ -112,6 +115,24 @@ export default class BattleInfo extends Phaser.GameObjects.Container {
       this.ownedIcon.setOrigin(0, 0);
       this.ownedIcon.setPositionRelative(this.nameText, 0, 11.75);
       this.add(this.ownedIcon);
+
+      this.teamIcons = new Array(6);
+      this.teamIconOver = new Array(6);
+
+      for (var ballindex = 0; ballindex < 6; ballindex++) {
+        this.teamIcons[ballindex] = this.scene.add.sprite(0, 0, "pb_tray_ball", "empty")
+        this.teamIcons[ballindex].setName("pb_teamball_" + ballindex);
+        this.teamIcons[ballindex].setVisible(false);
+        this.teamIcons[ballindex].setOrigin(0, 0);
+        this.teamIcons[ballindex].setPositionRelative(this.nameText, 6 * ballindex, 11.75);
+        this.add(this.teamIcons[ballindex]);
+        this.teamIconOver[ballindex] = this.scene.add.sprite(0, 0, "pb_tray_ball", "empty")
+        this.teamIconOver[ballindex].setName("pb_teamball_" + ballindex);
+        this.teamIconOver[ballindex].setVisible(false);
+        this.teamIconOver[ballindex].setOrigin(0, 0);
+        this.teamIconOver[ballindex].setPositionRelative(this.nameText, 6 * ballindex, 11.75);
+        this.add(this.teamIconOver[ballindex]);
+      }
 
       this.championRibbon = this.scene.add.sprite(0, 0, "champion_ribbon");
       this.championRibbon.setName("icon_champion_ribbon");
@@ -336,6 +357,13 @@ export default class BattleInfo extends Phaser.GameObjects.Container {
           this.championRibbon.setVisible(true);
         }
       }
+      if (pokemon.hasTrainer()) {
+        this.ownedIcon.setVisible(false);
+        this.championRibbon.setVisible(false);
+        for (var i = 0; i < this.teamIcons.length; i++) {
+          this.teamIcons[i].setVisible(true)
+        }
+      }
 
       // Check if Player owns all genders and forms of the Pokemon
       const missingDexAttrs = ((dexEntry.caughtAttr & opponentPokemonDexAttr) < opponentPokemonDexAttr);
@@ -461,6 +489,126 @@ export default class BattleInfo extends Phaser.GameObjects.Container {
     this.updateBossSegmentDividers(pokemon);
   }
 
+  displayParty(overwriteparty?: Pokemon[], useparty?: EnemyPokemon[]): void {
+    // Floor 8: 2 pokemon
+    // Floor 25: 3
+    // Floor 55: 4
+    // Floor 95: 5
+    // Floor 145: 6
+    // Floor 195: 6
+    var party = (this.scene as BattleScene).getEnemyParty()
+    if (useparty != undefined) {
+      console.debug("Using specified enemy party");
+      //party = useparty;
+    } else if (overwriteparty != undefined) {
+      console.debug("Using specified party");
+    }
+    var P;
+    if (useparty != undefined) {
+      //console.debug("Using specified enemy party");
+      P = useparty;
+    } else if (overwriteparty != undefined) {
+      //console.debug("Using specified party");
+      P = overwriteparty
+    } else {
+      P = party
+    }
+    var staticparty = (this.scene as BattleScene).getEnemyParty()
+    var states = new Array(6)
+    for (var i = 0; i < 6; i++) {
+      states[i] = "empty";
+    }
+    var total_visible = 0
+    for (var i = 0; i < P.length; i++) {
+      states[i] = "ball"
+      if (!party[i].hp) {
+        states[i] = "faint"
+      } else if (party[i].status) {
+        states[i] = "ball"
+      }
+      if (P[i].isOnField()) {
+        //console.log(P[i].name + " is in battle; set it as seen")
+        P[i].usedInBattle = true
+      }
+      if (P[i].usedInBattle) total_visible++;
+      //console.log(P[i].name, P[i].getIconAtlasKey(true))
+    }
+    console.log("Updating ball icons for party (" + P.length + ")")
+    if (staticparty.length > 0) {
+      for (var i = 0; i < staticparty.length; i++) {
+        //console.log(i, staticparty[i].name)
+      }
+    }
+    for (var ballindex = 0; ballindex < 6; ballindex++) {
+      //console.log(ballindex + ": setting icon " + states[ballindex])
+      if (states[ballindex] == "ball" && ballindex < P.length) {
+        if (P[ballindex].usedInBattle) {
+          this.teamIcons[ballindex].setTexture(P[ballindex].getIconAtlasKey(true))
+          this.teamIcons[ballindex].setFrame(P[ballindex].getIconId(true))
+          this.teamIcons[ballindex].setPositionRelative(this.nameText, 6 * ballindex - 5, 11.75 - 6);
+          this.teamIcons[ballindex].setDisplaySize(18, 15)
+          this.teamIconOver[ballindex].setTexture(P[ballindex].getIconAtlasKey(true))
+          this.teamIconOver[ballindex].setFrame(P[ballindex].getIconId(true))
+          this.teamIconOver[ballindex].setPositionRelative(this.nameText, 6 * ballindex - 5, 11.75 - 6);
+          this.teamIconOver[ballindex].setDisplaySize(18, 15)
+          this.teamIconOver[ballindex].setVisible(true)
+          this.teamIconOver[ballindex].setAlpha(0.4, 0.4, 0.7, 0.7)
+          if (P[ballindex].status && P[ballindex].hp) {
+            switch (P[ballindex].status.effect) {
+              case StatusEffect.NONE:
+                // Uncallable; replaced by "ball"
+                break;
+              case StatusEffect.POISON:
+                this.teamIconOver[ballindex].setTintFill(0xe40dfc)
+                break;
+              case StatusEffect.TOXIC:
+                this.teamIconOver[ballindex].setTintFill(0xfa2590)
+                break;
+              case StatusEffect.PARALYSIS:
+                this.teamIconOver[ballindex].setTintFill(0xf7ec1e)
+                break;
+              case StatusEffect.SLEEP:
+                this.teamIconOver[ballindex].setTintFill(0x54bfaa)
+                break;
+              case StatusEffect.FREEZE:
+                this.teamIconOver[ballindex].setTintFill(0xcbf0f2)
+                break;
+              case StatusEffect.BURN:
+                this.teamIconOver[ballindex].setTintFill(0xf51905)
+                break;
+              case StatusEffect.FAINT:
+                // Uncallable; replaced by "faint"
+                break;
+            }
+          } else {
+            this.teamIconOver[ballindex].clearTint()
+            this.teamIconOver[ballindex].setVisible(false)
+          }
+        } else {
+          this.teamIcons[ballindex].setTexture("pb_tray_ball")
+          this.teamIcons[ballindex].setFrame(states[ballindex])
+          this.teamIcons[ballindex].setPositionRelative(this.nameText, 6 * ballindex, 11.75);
+          this.teamIcons[ballindex].setDisplaySize(7, 7)
+          this.teamIconOver[ballindex].clearTint()
+          this.teamIconOver[ballindex].setVisible(false)
+        }
+      } else {
+        this.teamIcons[ballindex].setTexture("pb_tray_ball")
+        this.teamIcons[ballindex].setFrame(states[ballindex])
+        this.teamIcons[ballindex].setPositionRelative(this.nameText, 6 * ballindex, 11.75);
+        this.teamIcons[ballindex].setDisplaySize(7, 7)
+        this.teamIconOver[ballindex].clearTint()
+        this.teamIconOver[ballindex].setVisible(false)
+      }
+    }
+    for (var i = 0; i < P.length; i++) {
+      //console.log(P[i].name + ": " + states[i] + " (" + P[i].usedInBattle + "), " + P[i].hp + ", " + P[i].status)
+    }
+    for (i = P.length; i < 6; i++) {
+      //console.log("[empty]: " + states[i])
+    }
+  }
+
   updateBossSegmentDividers(pokemon: EnemyPokemon): void {
     while (this.hpBarSegmentDividers.length) {
       this.hpBarSegmentDividers.pop().destroy();
@@ -536,6 +684,12 @@ export default class BattleInfo extends Phaser.GameObjects.Container {
 
         if (!this.player && this.ownedIcon.visible) {
           this.ownedIcon.setAlpha(this.statusIndicator.visible ? 0 : 1);
+        }
+        for (var i = 0; i < this.teamIcons.length; i++) {
+          if (!this.player && this.teamIcons[i].visible) {
+            this.teamIcons[i].setAlpha(this.statusIndicator.visible ? 0 : 1);
+            this.teamIconOver[i].setAlpha(this.statusIndicator.visible ? 0 : 0.4, this.statusIndicator.visible ? 0 : 0.4, this.statusIndicator.visible ? 0 : 0.7, this.statusIndicator.visible ? 0 : 0.7);
+          }
         }
       }
 
@@ -647,6 +801,8 @@ export default class BattleInfo extends Phaser.GameObjects.Container {
   }
 
   updatePokemonExp(pokemon: Pokemon, instant?: boolean, levelDurationMultiplier: number = 1): Promise<void> {
+    var playedSound1 = false
+    var playedSound2 = false
     return new Promise(resolve => {
       const levelUp = this.lastLevel < pokemon.level;
       const relLevelExp = getLevelRelExp(this.lastLevel + 1, pokemon.species.growthRate);
@@ -670,7 +826,10 @@ export default class BattleInfo extends Phaser.GameObjects.Container {
         this.lastLevelExp = pokemon.levelExp;
       }
       if (duration) {
-        (this.scene as BattleScene).playSound("exp");
+        if (!playedSound1) {
+          playedSound1 = true;
+          (this.scene as BattleScene).playSound("exp");
+        }
       }
       this.scene.tweens.add({
         targets: this.expMaskRect,
@@ -682,10 +841,16 @@ export default class BattleInfo extends Phaser.GameObjects.Container {
             return resolve();
           }
           if (duration) {
-            this.scene.sound.stopByKey("exp");
+            if (!playedSound1) {
+              playedSound1 = true;
+              (this.scene as BattleScene).playSound("exp");
+            }
           }
           if (ratio === 1) {
-            (this.scene as BattleScene).playSound("level_up");
+            if (!playedSound2) {
+              playedSound2 = true;
+              (this.scene as BattleScene).playSound("level_up");
+            }
             this.setLevel(this.lastLevel);
             this.scene.time.delayedCall(500 * levelDurationMultiplier, () => {
               this.expMaskRect.x = 0;
