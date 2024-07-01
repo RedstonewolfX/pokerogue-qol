@@ -72,6 +72,8 @@ export default class BattleInfo extends Phaser.GameObjects.Container {
   private teamIcons: Phaser.GameObjects.Sprite[];
   private teamIconOver: Phaser.GameObjects.Sprite[];
 
+  private teamIconsShow: boolean[];
+
   constructor(scene: Phaser.Scene, x: number, y: number, player: boolean) {
     super(scene, x, y);
     this.baseY = y;
@@ -118,6 +120,7 @@ export default class BattleInfo extends Phaser.GameObjects.Container {
 
       this.teamIcons = new Array(6);
       this.teamIconOver = new Array(6);
+      this.teamIconsShow = new Array(6).fill(false);
 
       for (var ballindex = 0; ballindex < 6; ballindex++) {
         this.teamIcons[ballindex] = this.scene.add.sprite(0, 0, "pb_tray_ball", "empty")
@@ -553,6 +556,7 @@ export default class BattleInfo extends Phaser.GameObjects.Container {
           this.teamIconOver[ballindex].setDisplaySize(18, 15)
           this.teamIconOver[ballindex].setVisible(true)
           this.teamIconOver[ballindex].setAlpha(0.4, 0.4, 0.7, 0.7)
+          this.teamIconsShow[ballindex] = true
           if (P[ballindex].status && P[ballindex].hp) {
             switch (P[ballindex].status.effect) {
               case StatusEffect.NONE:
@@ -583,6 +587,7 @@ export default class BattleInfo extends Phaser.GameObjects.Container {
           } else {
             this.teamIconOver[ballindex].clearTint()
             this.teamIconOver[ballindex].setVisible(false)
+            this.teamIconsShow[ballindex] = false
           }
         } else {
           this.teamIcons[ballindex].setTexture("pb_tray_ball")
@@ -591,6 +596,7 @@ export default class BattleInfo extends Phaser.GameObjects.Container {
           this.teamIcons[ballindex].setDisplaySize(7, 7)
           this.teamIconOver[ballindex].clearTint()
           this.teamIconOver[ballindex].setVisible(false)
+          this.teamIconsShow[ballindex] = false
         }
       } else {
         this.teamIcons[ballindex].setTexture("pb_tray_ball")
@@ -599,6 +605,7 @@ export default class BattleInfo extends Phaser.GameObjects.Container {
         this.teamIcons[ballindex].setDisplaySize(7, 7)
         this.teamIconOver[ballindex].clearTint()
         this.teamIconOver[ballindex].setVisible(false)
+        this.teamIconsShow[ballindex] = false
       }
     }
     for (var i = 0; i < P.length; i++) {
@@ -688,7 +695,9 @@ export default class BattleInfo extends Phaser.GameObjects.Container {
         for (var i = 0; i < this.teamIcons.length; i++) {
           if (!this.player && this.teamIcons[i].visible) {
             this.teamIcons[i].setAlpha(this.statusIndicator.visible ? 0 : 1);
-            this.teamIconOver[i].setAlpha(this.statusIndicator.visible ? 0 : 0.4, this.statusIndicator.visible ? 0 : 0.4, this.statusIndicator.visible ? 0 : 0.7, this.statusIndicator.visible ? 0 : 0.7);
+            var v1 = this.statusIndicator.visible ? 0 : (this.teamIconsShow[i] ? 0 : 0.4)
+            var v2 = this.statusIndicator.visible ? 0 : (this.teamIconsShow[i] ? 0 : 0.7)
+            this.teamIconOver[i].setAlpha(v1, v1, v2, v2);
           }
         }
       }
