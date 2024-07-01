@@ -1463,10 +1463,11 @@ export class PokemonNatureChangeModifier extends ConsumablePokemonModifier {
 }
 
 export class PokemonLevelIncrementModifier extends ConsumablePokemonModifier {
-  private levels: integer;
-  constructor(type: ModifierType, pokemonId: integer, levels: integer = 1) {
+  private levels: integer = 1;
+  constructor(type: ModifierType, pokemonId: integer, levs: integer = 1) {
     super(type, pokemonId);
-    this.levels = levels
+
+    this.levels = levs
   }
 
   apply(args: any[]): boolean {

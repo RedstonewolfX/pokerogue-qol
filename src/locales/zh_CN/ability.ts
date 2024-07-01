@@ -947,7 +947,7 @@ export const ability: AbilityTranslationEntries = {
   },
   ballFetch: {
     name: "捡球",
-    description: "没有携带道具时，会拾取第１个投\n出后捕捉失败的精灵球。",
+    description: "会拾取每场战斗第1个投出\n后捕捉失败的精灵球。",
   },
   cottonDown: {
     name: "棉絮",
