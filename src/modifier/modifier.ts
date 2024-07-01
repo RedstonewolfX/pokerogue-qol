@@ -1463,13 +1463,16 @@ export class PokemonNatureChangeModifier extends ConsumablePokemonModifier {
 }
 
 export class PokemonLevelIncrementModifier extends ConsumablePokemonModifier {
-  constructor(type: ModifierType, pokemonId: integer) {
+  private levels: integer = 1;
+  constructor(type: ModifierType, pokemonId: integer, levs: integer = 1) {
     super(type, pokemonId);
+
+    this.levels = levs
   }
 
   apply(args: any[]): boolean {
     const pokemon = args[0] as PlayerPokemon;
-    const levelCount = new Utils.IntegerHolder(1);
+    const levelCount = new Utils.IntegerHolder(this.levels);
     pokemon.scene.applyModifiers(LevelIncrementBoosterModifier, true, levelCount);
 
     pokemon.level += levelCount.value;

@@ -563,8 +563,8 @@ export class SpeciesStatBoosterModifierType extends PokemonHeldItemModifierType 
 }
 
 export class PokemonLevelIncrementModifierType extends PokemonModifierType {
-  constructor(localeKey: string, iconImage: string) {
-    super(localeKey, iconImage, (_type, args) => new Modifiers.PokemonLevelIncrementModifier(this, (args[0] as PlayerPokemon).id), (_pokemon: PlayerPokemon) => null);
+  constructor(localeKey: string, iconImage: string, levs: integer = 1) {
+    super(localeKey, iconImage, (_type, args) => new Modifiers.PokemonLevelIncrementModifier(this, (args[0] as PlayerPokemon).id, levs), (_pokemon: PlayerPokemon) => null);
   }
 
   getDescription(scene: BattleScene): string {
@@ -1163,8 +1163,9 @@ export const modifierTypes = {
   ROGUE_BALL: () => new AddPokeballModifierType("rb", PokeballType.ROGUE_BALL, 5),
   MASTER_BALL: () => new AddPokeballModifierType("mb", PokeballType.MASTER_BALL, 1),
 
-  RARE_CANDY: () => new PokemonLevelIncrementModifierType("modifierType:ModifierType.RARE_CANDY", "rare_candy"),
+  RARE_CANDY: () => new PokemonLevelIncrementModifierType("modifierType:ModifierType.RARE_CANDY", "rare_candy", 1),
   RARER_CANDY: () => new AllPokemonLevelIncrementModifierType("modifierType:ModifierType.RARER_CANDY", "rarer_candy"),
+  RAREST_CANDY: () => new PokemonLevelIncrementModifierType("modifierType:ModifierType.RAREST_CANDY", "rarer_candy", 1),
 
   EVOLUTION_ITEM: () => new EvolutionItemModifierTypeGenerator(false),
   RARE_EVOLUTION_ITEM: () => new EvolutionItemModifierTypeGenerator(true),
