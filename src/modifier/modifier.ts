@@ -1463,13 +1463,15 @@ export class PokemonNatureChangeModifier extends ConsumablePokemonModifier {
 }
 
 export class PokemonLevelIncrementModifier extends ConsumablePokemonModifier {
-  constructor(type: ModifierType, pokemonId: integer) {
+  private levels: integer;
+  constructor(type: ModifierType, pokemonId: integer, levels: integer = 1) {
     super(type, pokemonId);
+    this.levels = levels
   }
 
   apply(args: any[]): boolean {
     const pokemon = args[0] as PlayerPokemon;
-    const levelCount = new Utils.IntegerHolder(1);
+    const levelCount = new Utils.IntegerHolder(this.levels);
     pokemon.scene.applyModifiers(LevelIncrementBoosterModifier, true, levelCount);
 
     pokemon.level += levelCount.value;
@@ -2286,7 +2288,7 @@ export class ExtraModifierModifier extends PersistentModifier {
   }
 
   getMaxStackCount(scene: BattleScene): integer {
-    return 3;
+    return 5;
   }
 }
 

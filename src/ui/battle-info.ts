@@ -117,6 +117,7 @@ export default class BattleInfo extends Phaser.GameObjects.Container {
       this.add(this.ownedIcon);
 
       this.teamIcons = new Array(6);
+      this.teamIconOver = new Array(6);
 
       for (var ballindex = 0; ballindex < 6; ballindex++) {
         this.teamIcons[ballindex] = this.scene.add.sprite(0, 0, "pb_tray_ball", "empty")
@@ -800,6 +801,8 @@ export default class BattleInfo extends Phaser.GameObjects.Container {
   }
 
   updatePokemonExp(pokemon: Pokemon, instant?: boolean, levelDurationMultiplier: number = 1): Promise<void> {
+    var playedSound1 = false
+    var playedSound2 = false
     return new Promise(resolve => {
       const levelUp = this.lastLevel < pokemon.level;
       const relLevelExp = getLevelRelExp(this.lastLevel + 1, pokemon.species.growthRate);
@@ -823,7 +826,10 @@ export default class BattleInfo extends Phaser.GameObjects.Container {
         this.lastLevelExp = pokemon.levelExp;
       }
       if (duration) {
-        (this.scene as BattleScene).playSound("exp");
+        if (!playedSound1) {
+          playedSound1 = true;
+          (this.scene as BattleScene).playSound("exp");
+        }
       }
       this.scene.tweens.add({
         targets: this.expMaskRect,
@@ -835,10 +841,17 @@ export default class BattleInfo extends Phaser.GameObjects.Container {
             return resolve();
           }
           if (duration) {
-            this.scene.sound.stopByKey("exp");
+            if (!playedSound1) {
+              playedSound1 = true;
+              (this.scene as BattleScene).playSound("exp");
+            }
           }
           if (ratio === 1) {
-            (this.scene as BattleScene).playSound("level_up");
+            if (!playedSound2) {
+              playedSound2 = true;
+              (this.scene as BattleScene).playSound("level_up");
+            }
+            pokemon.refresh()
             this.setLevel(this.lastLevel);
             this.scene.time.delayedCall(500 * levelDurationMultiplier, () => {
               this.expMaskRect.x = 0;
@@ -846,6 +859,7 @@ export default class BattleInfo extends Phaser.GameObjects.Container {
             });
             return;
           }
+          pokemon.refresh();
           resolve();
         }
       });

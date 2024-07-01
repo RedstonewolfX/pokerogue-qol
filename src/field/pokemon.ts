@@ -237,6 +237,10 @@ export default abstract class Pokemon extends Phaser.GameObjects.Container {
     this.calculateStats();
   }
 
+  refresh(lev: integer = this.level): void {
+    this.setScale(this.getSpriteScale(lev));
+  }
+
   init(): void {
     this.fieldPosition = FieldPosition.CENTER;
 
@@ -519,12 +523,16 @@ export default abstract class Pokemon extends Phaser.GameObjects.Container {
       : this.maskSprite;
   }
 
-  getSpriteScale(): number {
+  getSpriteScale(lev: integer = this.level): number {
     const formKey = this.getFormKey();
+    var mult = 1
+    var isGmax = false
     if (formKey.indexOf(SpeciesFormKey.GIGANTAMAX) > -1 || formKey.indexOf(SpeciesFormKey.ETERNAMAX) > -1) {
-      return 1.5;
+      mult = 1.5;
+      isGmax = true
     }
-    return 1;
+    if (!this.scene.scaling) return mult;
+    return mult + ((Math.floor(lev)/(isGmax ? 30 : 30)/3) * (isGmax ? 1.3 : 1));
   }
 
   getHeldItems(): PokemonHeldItemModifier[] {
@@ -3038,6 +3046,7 @@ export class PlayerPokemon extends Pokemon {
   }
 
   isPlayer(): boolean {
+    if (this.scene.scaling) this.refresh()
     return true;
   }
 

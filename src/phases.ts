@@ -198,6 +198,21 @@ export function parseSlotData(slotId: integer): SessionSaveData {
         Save.description += "Fresh Start"
         break;
     }
+  } else if (challengeParts.length == 0) {
+    switch (Save.gameMode) {
+      case GameModes.CLASSIC:
+        Save.description += "Classic";
+        break;
+      case GameModes.ENDLESS:
+        Save.description += "Endless";
+        break;
+      case GameModes.SPLICED_ENDLESS:
+        Save.description += "Endless+";
+        break;
+      case GameModes.DAILY:
+        Save.description += "Daily";
+        break;
+    }
   } else {
     Save.description += nameParts.join(" ")
   }
@@ -1861,7 +1876,7 @@ export class ReturnPhase extends SwitchSummonPhase {
     pokemon.resetTurnData();
     pokemon.resetSummonData();
 
-    this.scene.updateFieldScale();
+    this.scene.setFieldScale(1)
 
     this.scene.triggerPokemonFormChange(pokemon, SpeciesFormChangeActiveTrigger);
   }
@@ -2002,6 +2017,8 @@ export class TurnInitPhase extends FieldPhase {
   start() {
     super.start();
 
+    this.scene.updateFieldScale();
+
     this.scene.getPlayerField().forEach(p => {
       // If this pokemon is in play and evolved into something illegal under the current challenge, force a switch
       if (p.isOnField() && !p.isAllowedInBattle()) {
@@ -2039,14 +2056,21 @@ export class TurnInitPhase extends FieldPhase {
           this.scene.currentBattle.addParticipant(pokemon as PlayerPokemon);
         } else {
           pokemon.usedInBattle = true;
-          pokemon.getBattleInfo().displayParty(this.scene.getEnemyParty())
         }
 
+        pokemon.refresh();
         pokemon.resetTurnData();
 
         this.scene.pushPhase(pokemon.isPlayer() ? new CommandPhase(this.scene, i) : new EnemyCommandPhase(this.scene, i - BattlerIndex.ENEMY));
       }
     });
+
+    var Pt = this.scene.getEnemyParty()
+    Pt.forEach((pokemon, i) => {
+      if (pokemon.hasTrainer()) {
+        pokemon.getBattleInfo().displayParty(Pt)
+      }
+    })
 
     this.scene.pushPhase(new TurnStartPhase(this.scene));
 
@@ -2628,6 +2652,11 @@ export class TurnEndPhase extends FieldPhase {
 export class BattleEndPhase extends BattlePhase {
   start() {
     super.start();
+    
+    for (var i = 0; i < this.scene.getParty().length; i++) {
+      this.scene.getParty()[i].refresh()
+    }
+    this.scene.updateFieldScale();
 
     this.scene.currentBattle.addBattleScore(this.scene);
 
