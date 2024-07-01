@@ -335,7 +335,7 @@ export class TitlePhase extends Phase {
     });
   }
 
-  getLastSave(): SessionSaveData {
+  getLastSave(log?: boolean): SessionSaveData {
     var saves: Array<Array<any>> = [];
     for (var i = 0; i < 5; i++) {
       var s = parseSlotData(i);
@@ -344,11 +344,13 @@ export class TitlePhase extends Phase {
       }
     }
     saves.sort((a, b): integer => {return b[2] - a[2]})
+    if (log) console.log(saves)
     return saves[0][1]
   }
 
   showOptions(): void {
     const options: OptionSelectItem[] = [];
+    if (false)
     if (loggedInUser.lastSessionSlot > -1) {
       options.push({
         label: i18next.t("continue", null, { ns: "menu"}),
@@ -367,6 +369,9 @@ export class TitlePhase extends Phase {
           return true;
         }
       })
+    } else {
+      console.log("Failed to get last save")
+      this.getLastSave(true)
     }
     options.push({
       label: i18next.t("menu:newGame"),
