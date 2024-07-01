@@ -1,41 +1,32 @@
 {
-	"textures": [
-		{
-			"image": "823.png",
-			"format": "RGBA8888",
-			"size": {
-				"w": 68,
-				"h": 68
-			},
-			"scale": 1,
-			"frames": [
-				{
-					"filename": "0001.png",
-					"rotated": false,
-					"trimmed": false,
-					"sourceSize": {
-						"w": 51,
-						"h": 68
-					},
-					"spriteSourceSize": {
-						"x": 0,
-						"y": 0,
-						"w": 51,
-						"h": 68
-					},
-					"frame": {
-						"x": 0,
-						"y": 0,
-						"w": 51,
-						"h": 68
-					}
-				}
-			]
-		}
-	],
-	"meta": {
-		"app": "https://www.codeandweb.com/texturepacker",
-		"version": "3.0",
-		"smartupdate": "$TexturePacker:SmartUpdate:ba9bbe5b90dfd173c6f640b5633b19a7:9aae2b6205d086fe841aa59c98c75c4a:eae5dd4a27803e7483651394a6051ff0$"
+	"1": {
+		"251d4e": "6a445c",
+		"434475": "e7a6c9",
+		"303360": "ad6f83",
+		"646ca8": "ffdeeb",
+		"4d5488": "f4a0b9",
+		"010101": "010101",
+		"ffa8a8": "ffc586",
+		"f30101": "df7b10",
+		"4e4150": "57445a",
+		"2c2b58": "845195",
+		"18173d": "4b2a5e",
+		"3e3d6d": "bc7dc3",
+		"2e262f": "2e262f"
+	},
+	"2": {
+		"251d4e": "547585",
+		"434475": "d8e2ed",
+		"303360": "99cae0",
+		"646ca8": "aedcf5",
+		"4d5488": "99bbde",
+		"010101": "010101",
+		"ffa8a8": "ff4afc",
+		"f30101": "ba00e8",
+		"4e4150": "8b98d6",
+		"2c2b58": "93bbcf",
+		"18173d": "536c8a",
+		"3e3d6d": "93bad9",
+		"2e262f": "485987"
 	}
 }
