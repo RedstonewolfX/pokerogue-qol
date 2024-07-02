@@ -4966,6 +4966,10 @@ export class AttemptCapturePhase extends PokemonPhase {
     this.pokeballType = pokeballType;
   }
 
+  map(v, min, max, minV, maxV) {
+    return ((v - min) / (max - min)) * (maxV - minV) + minV;
+  }
+
   start() {
     super.start();
 
@@ -5026,6 +5030,7 @@ export class AttemptCapturePhase extends PokemonPhase {
             const doShake = () => {
               let shakeCount = 0;
               const pbX = this.pokeball.x;
+              let shakePower = 1
               const shakeCounter = this.scene.tweens.addCounter({
                 from: 0,
                 to: 1,
@@ -5037,7 +5042,7 @@ export class AttemptCapturePhase extends PokemonPhase {
                 onUpdate: t => {
                   if (shakeCount && shakeCount < 4) {
                     const value = t.getValue();
-                    const directionMultiplier = shakeCount % 2 === 1 ? 1 : -1;
+                    const directionMultiplier = (shakeCount % 2 === 1 ? 1 : -1) * shakePower;
                     this.pokeball.setX(pbX + value * 4 * directionMultiplier);
                     this.pokeball.setAngle(value * 27.5 * directionMultiplier);
                   }
@@ -5047,8 +5052,10 @@ export class AttemptCapturePhase extends PokemonPhase {
                     shakeCounter.stop();
                     this.failCatch(shakeCount);
                   } else if (shakeCount++ < 3) {
-                    if (pokeballMultiplier === -1 || pokemon.randSeedInt(65536) < y) {
+                    var randomval = pokemon.randSeedInt(65536)
+                    if (pokeballMultiplier === -1 || randomval < y) {
                       this.scene.playSound("pb_move");
+                      shakePower = this.map(randomval, 0, y, 0.2, 1.3)
                     } else {
                       shakeCounter.stop();
                       this.failCatch(shakeCount);
