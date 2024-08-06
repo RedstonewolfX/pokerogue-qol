@@ -11,6 +11,7 @@ import { BattleStat } from "#app/data/battle-stat";
 import BattleFlyout from "./battle-flyout";
 import { WindowVariant, addWindow } from "./ui-theme";
 import i18next from "i18next";
+import { calcDamage } from "./fight-ui-handler";
 
 const battleStatOrder = [ BattleStat.ATK, BattleStat.DEF, BattleStat.SPATK, BattleStat.SPDEF, BattleStat.ACC, BattleStat.EVA, BattleStat.SPD ];
 
@@ -70,6 +71,15 @@ export default class BattleInfo extends Phaser.GameObjects.Container {
 
   public flyoutMenu?: BattleFlyout;
 
+  private teamIcons: Phaser.GameObjects.Sprite[];
+  private teamIconOver: Phaser.GameObjects.Sprite[];
+  private teamIconsShow: boolean[];
+  public iconsActive: boolean = false;
+  private teamCount: integer = 0;
+  private showingTeam: boolean = false;
+  private pressedShow: boolean = false;
+  private override: boolean = false;
+
   constructor(scene: Phaser.Scene, x: number, y: number, player: boolean) {
     super(scene, x, y);
     this.baseY = y;
@@ -114,11 +124,32 @@ export default class BattleInfo extends Phaser.GameObjects.Container {
       this.ownedIcon.setPositionRelative(this.nameText, 0, 11.75);
       this.add(this.ownedIcon);
 
+      this.teamIcons = new Array(6);
+      this.teamIconOver = new Array(6);
+      this.teamIconsShow = new Array(6).fill(false);
+
+      for (var ballindex = 0; ballindex < 6; ballindex++) {
+        this.teamIcons[ballindex] = this.scene.add.sprite(0, 0, "pb_tray_ball", "empty")
+        this.teamIcons[ballindex].setName("pb_teamball_" + ballindex);
+        this.teamIcons[ballindex].setVisible(true);
+        this.teamIcons[ballindex].setAlpha(0);
+        this.teamIcons[ballindex].setOrigin(0, 0);
+        this.teamIcons[ballindex].setPositionRelative(this.nameText, 6 * ballindex, 11.75);
+        this.add(this.teamIcons[ballindex]);
+        this.teamIconOver[ballindex] = this.scene.add.sprite(0, 0, "pb_tray_ball", "empty")
+        this.teamIconOver[ballindex].setName("pb_teamball_" + ballindex);
+        this.teamIconOver[ballindex].setVisible(true);
+        this.teamIconOver[ballindex].setAlpha(0);
+        this.teamIconOver[ballindex].setOrigin(0, 0);
+        this.teamIconOver[ballindex].setPositionRelative(this.nameText, 6 * ballindex, 11.75);
+        this.add(this.teamIconOver[ballindex]);
+      }
+
       this.championRibbon = this.scene.add.sprite(0, 0, "champion_ribbon");
       this.championRibbon.setName("icon_champion_ribbon");
       this.championRibbon.setVisible(false);
       this.championRibbon.setOrigin(0, 0);
-      this.championRibbon.setPositionRelative(this.nameText, 11.75, 11.75);
+      this.championRibbon.setPositionRelative(this.nameText, 8, 11.75);
       this.add(this.championRibbon);
     }
 
@@ -278,8 +309,8 @@ export default class BattleInfo extends Phaser.GameObjects.Container {
     this.updateNameText(pokemon);
     const nameTextWidth = this.nameText.displayWidth;
 
-    this.name = pokemon.name;
-    this.box.name = pokemon.name;
+    this.name = pokemon.getNameToRender();
+    this.box.name = pokemon.getNameToRender();
 
     this.flyoutMenu?.initInfo(pokemon);
 
@@ -329,6 +360,11 @@ export default class BattleInfo extends Phaser.GameObjects.Container {
     }
 
     if (!this.player) {
+      if (this.nameText.visible) {
+        this.nameText.on("pointerover", () => (this.scene as BattleScene).ui.showTooltip(null, i18next.t("battleInfo:generation", { generation: i18next.t(`starterSelectUiHandler:gen${pokemon.species.generation}`) })));
+        this.nameText.on("pointerout", () => (this.scene as BattleScene).ui.hideTooltip());
+      }
+
       const dexEntry = pokemon.scene.gameData.dexData[pokemon.species.speciesId];
       this.ownedIcon.setVisible(!!dexEntry.caughtAttr);
       const opponentPokemonDexAttr = pokemon.getDexAttr();
@@ -341,18 +377,21 @@ export default class BattleInfo extends Phaser.GameObjects.Container {
       // Check if Player owns all genders and forms of the Pokemon
       const missingDexAttrs = ((dexEntry.caughtAttr & opponentPokemonDexAttr) < opponentPokemonDexAttr);
 
-      /**
-       * If the opposing Pokemon only has 1 normal ability and is using the hidden ability it should have the same behavior
-       * if it had 2 normal abilities. This code checks if that is the case and uses the correct opponent Pokemon abilityIndex (2)
-       * for calculations so it aligns with where the hidden ability is stored in the starter data's abilityAttr (4)
-       */
-      const opponentPokemonOneNormalAbility = (pokemon.species.getAbilityCount() === 2);
-      const opponentPokemonAbilityIndex = (opponentPokemonOneNormalAbility && pokemon.abilityIndex === 1) ? 2 : pokemon.abilityIndex;
-      const opponentPokemonAbilityAttr = Math.pow(2, opponentPokemonAbilityIndex);
+      const ownedAbilityAttrs = pokemon.scene.gameData.starterData[pokemon.species.getRootSpeciesId()].abilityAttr;
 
-      const rootFormHasHiddenAbility = pokemon.scene.gameData.starterData[pokemon.species.getRootSpeciesId()].abilityAttr & opponentPokemonAbilityAttr;
+      let playerOwnsThisAbility = false;
+      // Check if the player owns ability for the root form
+      if ((ownedAbilityAttrs & 1) > 0 && pokemon.hasSameAbilityInRootForm(0)) {
+        playerOwnsThisAbility = true;
+      }
+      if ((ownedAbilityAttrs & 2) > 0 && pokemon.hasSameAbilityInRootForm(1)) {
+        playerOwnsThisAbility = true;
+      }
+      if ((ownedAbilityAttrs & 4) > 0 && pokemon.hasSameAbilityInRootForm(2)) {
+        playerOwnsThisAbility = true;
+      }
 
-      if (missingDexAttrs || !rootFormHasHiddenAbility) {
+      if (missingDexAttrs || !playerOwnsThisAbility) {
         this.ownedIcon.setTint(0x808080);
       }
 
@@ -442,6 +481,11 @@ export default class BattleInfo extends Phaser.GameObjects.Container {
       ease: "Sine.easeInOut",
       alpha: visible ? 1 : 0
     });
+    if (visible) {
+      (this.scene as BattleScene).arenaFlyout.printIVs()
+    } else {
+      (this.scene as BattleScene).arenaFlyout.updateFieldText()
+    }
   }
 
   updateBossSegments(pokemon: EnemyPokemon): void {
@@ -484,6 +528,153 @@ export default class BattleInfo extends Phaser.GameObjects.Container {
     }
   }
 
+  displayParty(overwriteparty?: Pokemon[], useparty?: EnemyPokemon[]): void {
+    // Floor 8: 2 pokemon
+    // Floor 25: 3
+    // Floor 55: 4
+    // Floor 95: 5
+    // Floor 145: 6
+    // Floor 195: 6
+    var party = (this.scene as BattleScene).getEnemyParty()
+    if (useparty != undefined) {
+      console.debug("Using specified enemy party");
+      //party = useparty;
+    } else if (overwriteparty != undefined) {
+      console.debug("Using specified party");
+    }
+    var P;
+    if (useparty != undefined) {
+      //console.debug("Using specified enemy party");
+      P = useparty;
+    } else if (overwriteparty != undefined) {
+      //console.debug("Using specified party");
+      P = overwriteparty
+    } else {
+      P = party
+    }
+    var staticparty = (this.scene as BattleScene).getEnemyParty()
+    var states = new Array(6)
+    for (var i = 0; i < 6; i++) {
+      states[i] = "empty";
+    }
+    var total_visible = 0
+    for (var i = 0; i < P.length; i++) {
+      if (P[i] != undefined) {
+        states[i] = "ball"
+        if (!P[i].hp) {
+          states[i] = "faint"
+        } else if (P[i].status) {
+          states[i] = (this.scene as BattleScene).showTeamSprites ? "ball" : "status"
+        }
+        if (P[i].isOnField()) {
+          //console.log(P[i].name + " is in battle; set it as seen")
+          P[i].usedInBattle = true
+        }
+        if (P[i].usedInBattle) total_visible++;
+        //console.log(P[i].name, P[i].getIconAtlasKey(true))
+      }
+    }
+    console.log("Updating ball icons for party (" + P.length + ")")
+    if (staticparty.length > 0) {
+      for (var i = 0; i < staticparty.length; i++) {
+        //console.log(i, staticparty[i].name)
+      }
+    }
+    var Spacing = P.length == 6 ? 6 : 8
+    this.teamCount = P.length
+    for (var ballindex = 0; ballindex < 6; ballindex++) {
+      //console.log(ballindex + ": setting icon " + states[ballindex])
+      if (states[ballindex] == "ball" && P[ballindex].usedInBattle && (this.scene as BattleScene).showTeamSprites) {
+        this.teamIcons[ballindex].setTexture(P[ballindex].getIconAtlasKey(true))
+          this.teamIcons[ballindex].setFrame(P[ballindex].getIconId(true))
+          this.teamIcons[ballindex].setPositionRelative(this.nameText, Spacing * ballindex - 3, 11.75 - 4);
+          this.teamIcons[ballindex].setDisplaySize(18 * 0.8, 15 * 0.8)
+          this.teamIconOver[ballindex].setTexture(P[ballindex].getIconAtlasKey(true))
+          this.teamIconOver[ballindex].setFrame(P[ballindex].getIconId(true))
+          this.teamIconOver[ballindex].setPositionRelative(this.nameText, Spacing * ballindex - 3, 11.75 - 4);
+          this.teamIconOver[ballindex].setDisplaySize(18 * 0.8, 15 * 0.8)
+          this.teamIconOver[ballindex].setVisible(true)
+          this.teamIconsShow[ballindex] = true
+          if (P[ballindex].status && P[ballindex].hp) {
+            switch (P[ballindex].status.effect) {
+              case StatusEffect.NONE:
+                // Uncallable; replaced by "ball"
+                break;
+              case StatusEffect.POISON:
+                this.teamIconOver[ballindex].setTintFill(0xe40dfc)
+                break;
+              case StatusEffect.TOXIC:
+                this.teamIconOver[ballindex].setTintFill(0xfa2590)
+                break;
+              case StatusEffect.PARALYSIS:
+                this.teamIconOver[ballindex].setTintFill(0xf7ec1e)
+                break;
+              case StatusEffect.SLEEP:
+                this.teamIconOver[ballindex].setTintFill(0x54bfaa)
+                break;
+              case StatusEffect.FREEZE:
+                this.teamIconOver[ballindex].setTintFill(0xcbf0f2)
+                break;
+              case StatusEffect.BURN:
+                this.teamIconOver[ballindex].setTintFill(0xf51905)
+                break;
+              case StatusEffect.FAINT:
+                // Uncallable; replaced by "faint"
+                break;
+            }
+          } else {
+            this.teamIconOver[ballindex].clearTint()
+            this.teamIconOver[ballindex].setVisible(false)
+            this.teamIconsShow[ballindex] = false
+          }
+      } else {
+        this.teamIcons[ballindex].setTexture("pb_tray_ball")
+        this.teamIcons[ballindex].setFrame(states[ballindex])
+        this.teamIcons[ballindex].setPositionRelative(this.nameText, Spacing * ballindex, 11.75);
+        this.teamIcons[ballindex].setDisplaySize(7, 7)
+        this.teamIcons[ballindex].setVisible(states[ballindex] != 'empty')
+        this.teamIconOver[ballindex].clearTint()
+        this.teamIconOver[ballindex].setVisible(false)
+        this.teamIconsShow[ballindex] = false
+        this.teamIcons[ballindex].clearTint()
+        if (states[ballindex] == "status" && P[ballindex].usedInBattle) {
+          if (P[ballindex].status && P[ballindex].hp) {
+            switch (P[ballindex].status.effect) {
+              case StatusEffect.NONE:
+                // Uncallable; replaced by "ball"
+                break;
+              case StatusEffect.POISON:
+                this.teamIcons[ballindex].setTintFill(0xe40dfc)
+                break;
+              case StatusEffect.TOXIC:
+                this.teamIcons[ballindex].setTintFill(0xfa2590)
+                break;
+              case StatusEffect.PARALYSIS:
+                this.teamIcons[ballindex].setTintFill(0xf7ec1e)
+                break;
+              case StatusEffect.SLEEP:
+                this.teamIcons[ballindex].setTintFill(0x54bfaa)
+                break;
+              case StatusEffect.FREEZE:
+                this.teamIcons[ballindex].setTintFill(0xcbf0f2)
+                break;
+              case StatusEffect.BURN:
+                this.teamIcons[ballindex].setTintFill(0xf51905)
+                break;
+              case StatusEffect.FAINT:
+                // Uncallable; replaced by "faint"
+                break;
+            }
+          } else if (this.teamIcons[ballindex].tint) {
+            this.teamIcons[ballindex].clearTint()
+          }
+        } else if (this.teamIcons[ballindex].tint) {
+          this.teamIcons[ballindex].clearTint()
+        }
+      }
+    }
+  }
+
   setOffset(offset: boolean): void {
     if (this.offset === offset) {
       return;
@@ -502,7 +693,7 @@ export default class BattleInfo extends Phaser.GameObjects.Container {
         return resolve();
       }
 
-      const nameUpdated = this.lastName !== pokemon.name;
+      const nameUpdated = this.lastName !== pokemon.getNameToRender();
 
       if (nameUpdated) {
         this.updateNameText(pokemon);
@@ -532,12 +723,22 @@ export default class BattleInfo extends Phaser.GameObjects.Container {
 
         if (this.lastStatus !== StatusEffect.NONE) {
           this.statusIndicator.setFrame(StatusEffect[this.lastStatus].toLowerCase());
+          this.statusIndicator.setVisible(!!this.lastStatus);
+        } else if (this.player) {
+          this.statusIndicator.setVisible(!!this.lastStatus);
+        } else {
+          this.statusIndicator.setVisible(!!this.lastStatus);
+          this.switchIconVisibility(this.showingTeam, true)
         }
-        this.statusIndicator.setVisible(!!this.lastStatus);
 
         if (!this.player && this.ownedIcon.visible) {
-          this.ownedIcon.setAlpha(this.statusIndicator.visible ? 0 : 1);
+          this.switchIconVisibility(this.showingTeam, true)
         }
+
+        const offsetX = !this.player ? (this.ownedIcon.visible ? 8 : 0) + (this.championRibbon.visible ? 8 : 0) : 0;
+        this.statusIndicator.setPositionRelative(this.nameText, offsetX, 11.5);
+
+        //this.statusIndicator.setVisible(!!this.lastStatus);
       }
 
       const types = pokemon.getTypes(true);
@@ -629,7 +830,7 @@ export default class BattleInfo extends Phaser.GameObjects.Container {
   }
 
   updateNameText(pokemon: Pokemon): void {
-    let displayName = pokemon.name.replace(/[♂♀]/g, "");
+    let displayName = pokemon.getNameToRender().replace(/[♂♀]/g, "");
     let nameTextWidth: number;
 
     const nameSizeTest = addTextObject(this.scene, 0, 0, displayName, TextStyle.BATTLE_INFO);
@@ -644,7 +845,11 @@ export default class BattleInfo extends Phaser.GameObjects.Container {
     nameSizeTest.destroy();
 
     this.nameText.setText(displayName);
-    this.lastName = pokemon.name;
+    this.lastName = pokemon.getNameToRender();
+
+    if (this.nameText.visible) {
+      this.nameText.setInteractive(new Phaser.Geom.Rectangle(0, 0, this.nameText.width, this.nameText.height), Phaser.Geom.Rectangle.Contains);
+    }
   }
 
   updatePokemonExp(pokemon: Pokemon, instant?: boolean, levelDurationMultiplier: number = 1): Promise<void> {
@@ -742,8 +947,69 @@ export default class BattleInfo extends Phaser.GameObjects.Container {
     if (visible) {
       this.effectivenessContainer?.setVisible(false);
     } else {
-      this.updateEffectiveness(this.currentEffectiveness);
+      //this.updateEffectiveness(this.currentEffectiveness);
+      this.effectivenessContainer?.setVisible(true);
     }
+    if (!this.override) this.switchIconVisibility(visible);
+    // this.teamIconOver[ballindex].setAlpha(0.4, 0.4, 0.7, 0.7)
+  }
+  toggleTeamTray(visible: boolean): void {
+    this.pressedShow = visible;
+    if (!this.override) this.switchIconVisibility(visible);
+  }
+
+  /** 
+   * Overrides the state of the team display.
+   * 
+   * The state can't be switched by the player until the override is removed, but you can call this again to change the override state.
+   */
+  addTeamDisplayOverride(visible: boolean): void {
+    this.override = true;
+    this.switchIconVisibility(visible);
+  }
+  /**
+   * Removes any override on the team display.
+   * 
+   * The team display will then show/hide as required.
+   */
+  removeTeamDisplayOverride(): void {
+    this.override = false;
+    this.switchIconVisibility(this.pressedShow);
+  }
+
+  /** Show or hide team display. */
+  switchIconVisibility(visible: boolean = this.showingTeam, override?: boolean): void {
+    if (!this.iconsActive) visible = false
+    if (this.showingTeam == visible && !override) return; // Don't spam requests
+    this.showingTeam = visible
+    this.scene.tweens.add({
+      targets: this.teamIcons,
+      duration: Utils.fixedInt(125),
+      ease: "Sine.easeInOut",
+      alpha: visible ? 1 : 0
+    });
+    this.scene.tweens.add({
+      targets: this.teamIconOver,
+      duration: Utils.fixedInt(125),
+      ease: "Sine.easeInOut",
+      alphaTopLeft: visible ? 0.4 : 0,
+      alphaTopRight: visible ? 0.4 : 0,
+      alphaBottomLeft: visible ? 0.7 : 0,
+      alphaBottomRight: visible ? 0.7 : 0,
+    });
+    this.scene.tweens.add({
+      targets: [ this.championRibbon, this.ownedIcon ],
+      duration: Utils.fixedInt(125),
+      ease: "Sine.easeInOut",
+      alpha: visible && this.iconsActive ? 0 : this.statusIndicator.visible ? 0 : 1
+    });
+    this.scene.tweens.add({
+      targets: this.statusIndicator,
+      duration: Utils.fixedInt(125),
+      ease: "Sine.easeInOut",
+      alpha: visible && this.iconsActive ? 0 : (this.lastStatus == 0 ? 0 : 1)
+    });
+    //console.log(this.iconsActive, this.lastStatus, this.statusIndicator.visible, this.statusIndicator.alpha)
   }
 
   /**

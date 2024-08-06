@@ -16,6 +16,13 @@ const VOLUME_OPTIONS: SettingOption[] = new Array(11).fill(null).map((_, i) => i
   value: "Mute",
   label: i18next.t("settings:mute")
 });
+const SHOP_OVERLAY_OPACITY_OPTIONS: SettingOption[] = new Array(9).fill(null).map((_, i) => {
+  const value = ((i + 1) * 10).toString();
+  return {
+    value,
+    label: value,
+  };
+});
 const OFF_ON: SettingOption[] = [
   {
     value: "Off",
@@ -43,7 +50,8 @@ const AUTO_DISABLED: SettingOption[] = [
 export enum SettingType {
   GENERAL,
   DISPLAY,
-  AUDIO
+  AUDIO,
+  MOD
 }
 
 type SettingOption = {
@@ -98,6 +106,15 @@ export const SettingKeys = {
   SE_Volume: "SE_VOLUME",
   Music_Preference: "MUSIC_PREFERENCE",
   Show_BGM_Bar: "SHOW_BGM_BAR",
+  Show_Pokemon_Teams: "SHOW_POKEMON_TEAMS",
+  Damage_Display: "DAMAGE_DISPLAY",
+  LazyReloads: "FLAG_EVERY_RESET_AS_RELOAD",
+  FancyBiome: "FANCY_BIOMES",
+  ShowAutosaves: "SHOW_AUTOSAVES",
+  TitleScreenContinueMode: "TITLE_SCREEN_QUICKLOAD",
+  BiomePanels: "BIOME_PANELS",
+  DailyShinyLuck: "DAILY_LUCK",
+  Shop_Overlay_Opacity: "SHOP_OVERLAY_OPACITY"
 };
 
 /**
@@ -143,6 +160,42 @@ export const Setting: Array<Setting> = [
     ],
     default: 3,
     type: SettingType.GENERAL
+  },
+  {
+    key: SettingKeys.Damage_Display,
+    label: "Damage Display",
+    options: [{
+      label: "Off",
+      value: "Off"
+    }, {
+      label: "Value",
+      value: "Value"
+    }, {
+      label: "Percent",
+      value: "Percent"
+    }],
+    default: 0,
+    type: SettingType.GENERAL,
+  },
+  {
+    key: SettingKeys.FancyBiome,
+    label: "Fancy Title Screen",
+    options: [{
+      label: "Off",
+      value: "Off"
+    }, {
+      label: "On",
+      value: "On"
+    }],
+    default: 0,
+    type: SettingType.GENERAL,
+  },
+  {
+    key: SettingKeys.DailyShinyLuck,
+    label: "Daily Shiny Luck",
+    options: OFF_ON,
+    default: 0,
+    type: SettingType.GENERAL,
   },
   {
     key: SettingKeys.HP_Bar_Speed,
@@ -412,6 +465,26 @@ export const Setting: Array<Setting> = [
     type: SettingType.DISPLAY
   },
   {
+    key: SettingKeys.Show_Pokemon_Teams,
+    label: i18next.t("settings:showTeamTray"),
+    options: [
+      {
+        value: "Off",
+        label: i18next.t("settings:off")
+      },
+      {
+        value: "Ball",
+        label: i18next.t("settings:simple")
+      },
+      {
+        value: "Sprite",
+        label: i18next.t("settings:fancy")
+      }
+    ],
+    default: 1,
+    type: SettingType.DISPLAY
+  },
+  {
     key: SettingKeys.Show_Arena_Flyout,
     label: i18next.t("settings:showArenaFlyout"),
     options: OFF_ON,
@@ -493,9 +566,34 @@ export const Setting: Array<Setting> = [
     key: SettingKeys.Show_BGM_Bar,
     label: i18next.t("settings:showBgmBar"),
     options: OFF_ON,
+    default: 1,
+    type: SettingType.DISPLAY
+  },
+  {
+    key: SettingKeys.BiomePanels,
+    label: "Biome Panels",
+    options: [{
+      label: "Off",
+      value: "Off"
+    }, {
+      label: "On",
+      value: "On"
+    }],
     default: 0,
     type: SettingType.DISPLAY,
-    requireReload: true
+  },
+  {
+    key: SettingKeys.ShowAutosaves,
+    label: "Show Autosaves",
+    options: [{
+      label: "Off",
+      value: "Off"
+    }, {
+      label: "On",
+      value: "On"
+    }],
+    default: 0,
+    type: SettingType.DISPLAY,
   },
   {
     key: SettingKeys.Master_Volume,
@@ -535,7 +633,14 @@ export const Setting: Array<Setting> = [
     type: SettingType.AUDIO,
     requireReload: true
   },
-
+  {
+    key: SettingKeys.Shop_Overlay_Opacity,
+    label: i18next.t("settings:shopOverlayOpacity"),
+    options: SHOP_OVERLAY_OPACITY_OPTIONS,
+    default: 7,
+    type: SettingType.DISPLAY,
+    requireReload: false
+  },
 ];
 
 /**
@@ -604,6 +709,20 @@ export function setSetting(scene: BattleScene, setting: string, value: integer):
   case SettingKeys.Enable_Retries:
     scene.enableRetries = Setting[index].options[value].value === "On";
     break;
+  case SettingKeys.Damage_Display:
+    scene.damageDisplay = Setting[index].options[value].value
+  case SettingKeys.LazyReloads:
+    scene.lazyReloads = Setting[index].options[value].value == "On"
+  case SettingKeys.FancyBiome:
+    scene.menuChangesBiome = Setting[index].options[value].value == "On"
+  case SettingKeys.ShowAutosaves:
+    scene.showAutosaves = Setting[index].options[value].value == "On"
+  case SettingKeys.BiomePanels:
+    scene.doBiomePanels = Setting[index].options[value].value == "On"
+  case SettingKeys.DailyShinyLuck:
+    scene.disableDailyShinies = Setting[index].options[value].value == "Off"
+  case SettingKeys.TitleScreenContinueMode:
+    scene.quickloadDisplayMode  = Setting[index].options[value].value;
   case SettingKeys.Skip_Seen_Dialogues:
     scene.skipSeenDialogues = Setting[index].options[value].value === "On";
     break;
@@ -644,6 +763,10 @@ export function setSetting(scene: BattleScene, setting: string, value: integer):
     break;
   case SettingKeys.Show_Moveset_Flyout:
     scene.showMovesetFlyout = Setting[index].options[value].value === "On";
+    break;
+  case SettingKeys.Show_Pokemon_Teams:
+    scene.showTeams = Setting[index].options[value].value !== "Off";
+    scene.showTeamSprites = Setting[index].options[value].value === "Sprite";
     break;
   case SettingKeys.Show_Arena_Flyout:
     scene.showArenaFlyout = Setting[index].options[value].value === "On";
@@ -759,6 +882,9 @@ export function setSetting(scene: BattleScene, setting: string, value: integer):
         return false;
       }
     }
+    break;
+  case SettingKeys.Shop_Overlay_Opacity:
+    scene.updateShopOverlayOpacity(parseInt(Setting[index].options[value].value) * .01);
     break;
   }
 

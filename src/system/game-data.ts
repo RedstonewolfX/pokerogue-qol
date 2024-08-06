@@ -4,7 +4,7 @@ import Pokemon, { EnemyPokemon, PlayerPokemon } from "../field/pokemon";
 import { pokemonEvolutions, pokemonPrevolutions } from "../data/pokemon-evolutions";
 import PokemonSpecies, { allSpecies, getPokemonSpecies, noStarterFormKeys, speciesStarters } from "../data/pokemon-species";
 import * as Utils from "../utils";
-import * as Overrides from "../overrides";
+import Overrides from "#app/overrides";
 import PokemonData from "./pokemon-data";
 import PersistentModifierData from "./modifier-data";
 import ArenaData from "./arena-data";
@@ -40,6 +40,9 @@ import { GameDataType } from "#enums/game-data-type";
 import { Moves } from "#enums/moves";
 import { PlayerGender } from "#enums/player-gender";
 import { Species } from "#enums/species";
+import { applyChallenges, ChallengeType } from "#app/data/challenge.js";
+import { Abilities } from "#app/enums/abilities.js";
+import * as LoggerTools from "../logger"
 
 export const defaultStarterSpecies: Species[] = [
   Species.BULBASAUR, Species.CHARMANDER, Species.SQUIRTLE,
@@ -124,6 +127,7 @@ export interface SessionSaveData {
   challenges: ChallengeData[];
   slot: integer;
   description: string;
+  autoSlot: integer;
 }
 
 interface Unlocks {
@@ -574,6 +578,8 @@ export class GameData {
       // Account for past key oversight
       dataStr = dataStr.replace(/\$pAttr/g, "$pa");
     }
+    dataStr = dataStr.replace(/"trainerId":\d+/g, `"trainerId":${this.trainerId}`);
+    dataStr = dataStr.replace(/"secretId":\d+/g, `"secretId":${this.secretId}`);
     const fromKeys = shorten ? Object.keys(systemShortKeys) : Object.values(systemShortKeys);
     const toKeys = shorten ? Object.values(systemShortKeys) : Object.keys(systemShortKeys);
     for (const k in fromKeys) {
@@ -842,7 +848,7 @@ export class GameData {
     } as SessionSaveData;
   }
 
-  getSession(slotId: integer): Promise<SessionSaveData> {
+  getSession(slotId: integer, autoSlot?: integer): Promise<SessionSaveData> {
     return new Promise(async (resolve, reject) => {
       if (slotId < 0) {
         return resolve(null);
@@ -850,14 +856,26 @@ export class GameData {
       const handleSessionData = async (sessionDataStr: string) => {
         try {
           const sessionData = this.parseSessionData(sessionDataStr);
+          sessionData.autoSlot = autoSlot;
+          for (let i = 0; i <= 5; i++) {
+            const speciesToCheck = getPokemonSpecies(sessionData.party[i]?.species);
+            if (sessionData.party[i]?.abilityIndex === 1) {
+              if (speciesToCheck.ability1 === speciesToCheck.ability2 && speciesToCheck.abilityHidden !== Abilities.NONE && speciesToCheck.abilityHidden !== speciesToCheck.ability1) {
+                sessionData.party[i].abilityIndex = 2;
+              }
+            }
+          }
           resolve(sessionData);
         } catch (err) {
           reject(err);
           return;
         }
       };
-
-      if (!bypassLogin && !localStorage.getItem(`sessionData${slotId ? slotId : ""}_${loggedInUser.username}`)) {
+      var autokey = ""
+      if (autoSlot != undefined) {
+        autokey = "_auto" + autoSlot
+      }
+      if (!bypassLogin && !localStorage.getItem(`sessionData${slotId ? slotId : ""}_${loggedInUser.username}${autokey}`)) {
         Utils.apiFetch(`savedata/session/get?slot=${slotId}&clientSessionId=${clientSessionId}`, true)
           .then(response => response.text())
           .then(async response => {
@@ -871,7 +889,8 @@ export class GameData {
             await handleSessionData(response);
           });
       } else {
-        const sessionData = localStorage.getItem(`sessionData${slotId ? slotId : ""}_${loggedInUser.username}`);
+        const sessionData = localStorage.getItem(`sessionData${slotId ? slotId : ""}_${loggedInUser.username}${autokey}`);
+        //console.log(`sessionData${slotId ? slotId : ""}_${loggedInUser.username}${autokey}`, sessionData)
         if (sessionData) {
           await handleSessionData(decrypt(sessionData, bypassLogin));
         } else {
@@ -881,7 +900,7 @@ export class GameData {
     });
   }
 
-  loadSession(scene: BattleScene, slotId: integer, sessionData?: SessionSaveData): Promise<boolean> {
+  loadSession(scene: BattleScene, slotId: integer, sessionData?: SessionSaveData, autoSlot?: integer): Promise<boolean> {
     return new Promise(async (resolve, reject) => {
       try {
         const initSessionFromData = async (sessionData: SessionSaveData) => {
@@ -981,7 +1000,7 @@ export class GameData {
         if (sessionData) {
           initSessionFromData(sessionData);
         } else {
-          this.getSession(slotId)
+          this.getSession(slotId, autoSlot)
             .then(data => initSessionFromData(data))
             .catch(err => {
               reject(err);
@@ -1149,6 +1168,13 @@ export class GameData {
 
       return v;
     }) as SessionSaveData;
+  }
+
+  saveGameToAuto(scene: BattleScene) {
+    var autoSlot = LoggerTools.autoCheckpoints.indexOf(scene.currentBattle.waveIndex)
+    var dat = this.getSessionSaveData(scene)
+    console.log(`Stored autosave as sessionData${scene.sessionSlotId ? scene.sessionSlotId : ""}_${loggedInUser.username}_auto${autoSlot}`)
+    localStorage.setItem(`sessionData${scene.sessionSlotId ? scene.sessionSlotId : ""}_${loggedInUser.username}_auto${autoSlot}`, encrypt(JSON.stringify(dat), bypassLogin));
   }
 
   saveAll(scene: BattleScene, skipVerification: boolean = false, sync: boolean = false, useCachedSession: boolean = false, useCachedSystem: boolean = false): Promise<boolean> {
@@ -1678,7 +1704,10 @@ export class GameData {
       value = decrementValue(value);
     }
 
-    return value;
+    const cost = new Utils.NumberHolder(value);
+    applyChallenges(this.scene.gameMode, ChallengeType.STARTER_COST, speciesId, cost);
+
+    return cost.value;
   }
 
   getFormIndex(attr: bigint): integer {

@@ -9,6 +9,11 @@ import { BattleSceneEventType, TurnEndEvent } from "../events/battle-scene";
 import { ArenaTagType } from "#enums/arena-tag-type";
 import TimeOfDayWidget from "./time-of-day-widget";
 import * as Utils from "../utils";
+import i18next, {ParseKeys} from "i18next";
+import { getNatureDecrease, getNatureIncrease, getNatureName } from "#app/data/nature.js";
+import * as LoggerTools from "../logger"
+import { BattleEndPhase } from "#app/phases.js";
+import { Gender } from "#app/data/gender.js";
 
 /** Enum used to differentiate {@linkcode Arena} effects */
 enum ArenaEffectType {
@@ -33,7 +38,17 @@ interface ArenaEffectInfo {
   tagType?: ArenaTagType;
 }
 
-export default class ArenaFlyout extends Phaser.GameObjects.Container {
+export function getFieldEffectText(arenaTagType: string): string {
+  if (!arenaTagType || arenaTagType === ArenaTagType.NONE) {
+    return arenaTagType;
+  }
+  const effectName = Utils.toCamelCaseString(arenaTagType);
+  const i18nKey = `arenaFlyout:${effectName}` as ParseKeys;
+  const resultName = i18next.t(i18nKey);
+  return (!resultName || resultName === i18nKey) ? Utils.formatText(arenaTagType) : resultName;
+}
+
+export class ArenaFlyout extends Phaser.GameObjects.Container {
   /** An alias for the scene typecast to a {@linkcode BattleScene} */
   private battleScene: BattleScene;
 
@@ -111,7 +126,7 @@ export default class ArenaFlyout extends Phaser.GameObjects.Container {
 
     this.flyoutContainer.add(this.flyoutWindowHeader);
 
-    this.flyoutTextHeader = addTextObject(this.scene, this.flyoutWidth / 2, 0, "Active Battle Effects", TextStyle.BATTLE_INFO);
+    this.flyoutTextHeader = addTextObject(this.scene, this.flyoutWidth / 2, 0, i18next.t("arenaFlyout:activeBattleEffects"), TextStyle.BATTLE_INFO);
     this.flyoutTextHeader.setFontSize(54);
     this.flyoutTextHeader.setAlign("center");
     this.flyoutTextHeader.setOrigin();
@@ -121,21 +136,21 @@ export default class ArenaFlyout extends Phaser.GameObjects.Container {
     this.timeOfDayWidget = new TimeOfDayWidget(this.scene, (this.flyoutWidth / 2) + (this.flyoutWindowHeader.displayWidth / 2));
     this.flyoutContainer.add(this.timeOfDayWidget);
 
-    this.flyoutTextHeaderPlayer = addTextObject(this.scene, 6, 5, "Player", TextStyle.SUMMARY_BLUE);
+    this.flyoutTextHeaderPlayer = addTextObject(this.scene, 6, 5, i18next.t("arenaFlyout:player"), TextStyle.SUMMARY_BLUE);
     this.flyoutTextHeaderPlayer.setFontSize(54);
     this.flyoutTextHeaderPlayer.setAlign("left");
     this.flyoutTextHeaderPlayer.setOrigin(0, 0);
 
     this.flyoutContainer.add(this.flyoutTextHeaderPlayer);
 
-    this.flyoutTextHeaderField = addTextObject(this.scene, this.flyoutWidth / 2, 5, "Neutral", TextStyle.SUMMARY_GREEN);
+    this.flyoutTextHeaderField = addTextObject(this.scene, this.flyoutWidth / 2, 5, i18next.t("arenaFlyout:neutral"), TextStyle.SUMMARY_GREEN);
     this.flyoutTextHeaderField.setFontSize(54);
     this.flyoutTextHeaderField.setAlign("center");
     this.flyoutTextHeaderField.setOrigin(0.5, 0);
 
     this.flyoutContainer.add(this.flyoutTextHeaderField);
 
-    this.flyoutTextHeaderEnemy = addTextObject(this.scene, this.flyoutWidth - 6, 5, "Enemy", TextStyle.SUMMARY_RED);
+    this.flyoutTextHeaderEnemy = addTextObject(this.scene, this.flyoutWidth - 6, 5, i18next.t("arenaFlyout:enemy"), TextStyle.SUMMARY_RED);
     this.flyoutTextHeaderEnemy.setFontSize(54);
     this.flyoutTextHeaderEnemy.setAlign("right");
     this.flyoutTextHeaderEnemy.setOrigin(1, 0);
@@ -191,13 +206,95 @@ export default class ArenaFlyout extends Phaser.GameObjects.Container {
     this.flyoutTextPlayer.text = "";
     this.flyoutTextField.text = "";
     this.flyoutTextEnemy.text = "";
+    this.flyoutTextPlayer.setPosition(6, 13)
+    this.flyoutTextPlayer.setFontSize(48);
+  }
+
+  display1() {    
+    this.flyoutTextPlayer.text = ""
+    this.flyoutTextField.text = ""
+    this.flyoutTextEnemy.text = ""
+    this.flyoutTextHeaderField.text = ""
+    this.flyoutTextHeaderPlayer.text = ""
+    this.flyoutTextHeaderEnemy.text = ""
+    this.flyoutTextHeader.text = "Game Logs"
+    this.flyoutTextPlayer.setPosition(6, 4)
+    this.flyoutTextPlayer.setFontSize(30);
+    var instructions = []
+    var drpd = LoggerTools.getDRPD(this.scene as BattleScene);
+    var doWaveInstructions = true;
+    for (var i = 0; i < drpd.waves.length && drpd.waves[i] != undefined && doWaveInstructions; i++) {
+      if (drpd.waves[i].id > (this.scene as BattleScene).currentBattle.waveIndex) {
+        doWaveInstructions = false;
+      } else {
+        instructions.push("")
+        instructions.push("Wave " + drpd.waves[i].id)
+        for (var j = 0; j < drpd.waves[i].actions.length; j++) {
+          instructions.push("- " + drpd.waves[i].actions[j])
+        }
+        if (drpd.waves[i].shop != "")
+          instructions.push("Reward: " + drpd.waves[i].shop)
+      }
+    }
+    for (var i = instructions.length - 10; i < instructions.length; i++) {
+      if (i >= 0) {
+        this.flyoutTextPlayer.text += instructions[i]
+      }
+      this.flyoutTextPlayer.text += "\n"
+    }
+    if (true)
+    for (var i = 0; i < LoggerTools.enemyPlan.length; i++) {
+      if (LoggerTools.enemyPlan[i] != "") {
+        this.flyoutTextEnemy.text += LoggerTools.enemyPlan[i] + "\n"
+      }
+    }
+  }
+
+  display2() {
+    this.clearText()
+    var poke = (this.scene as BattleScene).getEnemyField()
+    this.flyoutTextPlayer.text = ""
+    this.flyoutTextField.text = ""
+    this.flyoutTextEnemy.text = ""
+    this.flyoutTextHeaderField.text = "Stats"
+    this.flyoutTextHeaderPlayer.text = ""
+    this.flyoutTextHeaderEnemy.text = ""
+    this.flyoutTextHeader.text = "IVs"
+    for (var i = 0; i < poke.length; i++) {
+      if (i == 1 || true) {
+        var formtext = ""
+        if (poke[i].species.forms?.[poke[i].formIndex]?.formName) {
+          formtext = " (" + poke[i].species.forms?.[poke[i].formIndex]?.formName + ")"
+          if (formtext == " (Normal)") {
+            formtext = ""
+          }
+        }
+        this.flyoutTextPlayer.text += poke[i].name + formtext + " " + (poke[i].gender == Gender.MALE ? "♂" : (poke[i].gender == Gender.FEMALE ? "♀" : "-")) + " " + poke[i].level + "\n"
+        this.flyoutTextEnemy.text += poke[i].getAbility().name + " / " + (poke[i].isBoss() ? poke[i].getPassiveAbility().name + " / " : "") + getNatureName(poke[i].nature) + (getNatureIncrease(poke[i].nature) != "" ? " (+" + getNatureIncrease(poke[i].nature) + " -" + getNatureDecrease(poke[i].nature) + ")" : "") + "\n\n\n"
+      }
+      this.flyoutTextPlayer.text += "HP: " + poke[i].ivs[0]
+      this.flyoutTextPlayer.text += ", Atk: " + poke[i].ivs[1]
+      this.flyoutTextPlayer.text += ", Def: " + poke[i].ivs[2]
+      this.flyoutTextPlayer.text += ", Sp.A: " + poke[i].ivs[3]
+      this.flyoutTextPlayer.text += ", Sp.D: " + poke[i].ivs[4]
+      this.flyoutTextPlayer.text += ", Speed: " + poke[i].ivs[5] + "\n\n"
+    }
+  }
+
+  public printIVs() {
+    this.display1()
   }
 
   /** Parses through all set Arena Effects and puts them into the proper {@linkcode Phaser.GameObjects.Text} object */
-  private updateFieldText() {
+  public updateFieldText() {
     this.clearText();
 
     this.fieldEffectInfo.sort((infoA, infoB) => infoA.duration - infoB.duration);
+
+    this.flyoutTextHeaderPlayer.text = "Player"
+    this.flyoutTextHeaderField.text = "Neutral"
+    this.flyoutTextHeaderEnemy.text = "Enemy"
+    this.flyoutTextHeader.text = "Active Battle Effects"
 
     for (let i = 0; i < this.fieldEffectInfo.length; i++) {
       const fieldEffectInfo = this.fieldEffectInfo[i];
@@ -221,10 +318,7 @@ export default class ArenaFlyout extends Phaser.GameObjects.Container {
         break;
       }
 
-      textObject.text += Utils.formatText(fieldEffectInfo.name);
-      if (fieldEffectInfo.effecType === ArenaEffectType.TERRAIN) {
-        textObject.text += " Terrain"; // Adds 'Terrain' since the enum does not contain it
-      }
+      textObject.text += fieldEffectInfo.name;
 
       if (fieldEffectInfo.maxDuration !== 0) {
         textObject.text += "  " + fieldEffectInfo.duration + "/" + fieldEffectInfo.maxDuration;
@@ -232,6 +326,7 @@ export default class ArenaFlyout extends Phaser.GameObjects.Container {
 
       textObject.text += "\n";
     }
+    this.display2()
   }
 
   /**
@@ -260,7 +355,7 @@ export default class ArenaFlyout extends Phaser.GameObjects.Container {
       }
 
       const existingTrapTagIndex = isArenaTrapTag ? this.fieldEffectInfo.findIndex(e => tagAddedEvent.arenaTagType === e.tagType && arenaEffectType === e.effecType) : -1;
-      let name: string = ArenaTagType[tagAddedEvent.arenaTagType];
+      let name: string =  getFieldEffectText(ArenaTagType[tagAddedEvent.arenaTagType]);
 
       if (isArenaTrapTag) {
         if (existingTrapTagIndex !== -1) {
@@ -295,15 +390,15 @@ export default class ArenaFlyout extends Phaser.GameObjects.Container {
 
       // Stores the old Weather/Terrain name in case it's in the array already
       const oldName =
-      fieldEffectChangedEvent instanceof WeatherChangedEvent
-        ? WeatherType[fieldEffectChangedEvent.oldWeatherType]
-        : TerrainType[fieldEffectChangedEvent.oldTerrainType];
+        getFieldEffectText(fieldEffectChangedEvent instanceof WeatherChangedEvent
+          ? WeatherType[fieldEffectChangedEvent.oldWeatherType]
+          : TerrainType[fieldEffectChangedEvent.oldTerrainType]);
       // Stores the new Weather/Terrain info
       const newInfo = {
         name:
-          fieldEffectChangedEvent instanceof WeatherChangedEvent
+          getFieldEffectText(fieldEffectChangedEvent instanceof WeatherChangedEvent
             ? WeatherType[fieldEffectChangedEvent.newWeatherType]
-            : TerrainType[fieldEffectChangedEvent.newTerrainType],
+            : TerrainType[fieldEffectChangedEvent.newTerrainType]),
         effecType: fieldEffectChangedEvent instanceof WeatherChangedEvent
           ? ArenaEffectType.WEATHER
           : ArenaEffectType.TERRAIN,

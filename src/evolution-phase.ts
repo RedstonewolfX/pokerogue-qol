@@ -10,6 +10,8 @@ import { cos, sin } from "./field/anims";
 import { PlayerPokemon } from "./field/pokemon";
 import { getTypeRgb } from "./data/type";
 import i18next from "i18next";
+import { getPokemonNameWithAffix } from "./messages";
+import * as LoggerTools from "./logger";
 
 export class EvolutionPhase extends Phase {
   protected pokemon: PlayerPokemon;
@@ -116,7 +118,7 @@ export class EvolutionPhase extends Phase {
 
   doEvolution(): void {
     const evolutionHandler = this.scene.ui.getHandler() as EvolutionSceneHandler;
-    const preName = this.pokemon.name;
+    const preName = getPokemonNameWithAffix(this.pokemon);
 
     this.scene.ui.showText(i18next.t("menu:evolving", { pokemonName: preName }), null, () => {
       this.pokemon.cry();
@@ -200,10 +202,12 @@ export class EvolutionPhase extends Phase {
                                 this.end();
                               };
                               this.scene.ui.setOverlayMode(Mode.CONFIRM, () => {
+                                LoggerTools.logActions(this.scene, this.scene.currentBattle.waveIndex, "Cancel " + preName + "'s evolution and pause evolutions")
                                 this.scene.ui.revertMode();
                                 this.pokemon.pauseEvolutions = true;
                                 this.scene.ui.showText(i18next.t("menu:evolutionsPaused", { pokemonName: preName }), null, end, 3000);
                               }, () => {
+                                LoggerTools.logActions(this.scene, this.scene.currentBattle.waveIndex, "Cancel " + preName + "'s evolution")
                                 this.scene.ui.revertMode();
                                 this.scene.time.delayedCall(3000, end);
                               });
@@ -218,7 +222,8 @@ export class EvolutionPhase extends Phase {
                         this.scene.time.delayedCall(900, () => {
                           evolutionHandler.canCancel = false;
 
-                          this.pokemon.evolve(this.evolution).then(() => {
+                          this.pokemon.evolve(this.evolution, this.pokemon.species).then(() => {
+                            LoggerTools.logActions(this.scene, this.scene.currentBattle.waveIndex, "Evolve " + preName)
                             const levelMoves = this.pokemon.getLevelMoves(this.lastLevel + 1, true);
                             for (const lm of levelMoves) {
                               this.scene.unshiftPhase(new LearnMovePhase(this.scene, this.scene.getParty().indexOf(this.pokemon), lm[1]));

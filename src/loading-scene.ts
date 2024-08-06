@@ -23,6 +23,97 @@ import { initVouchers } from "./system/voucher";
 import { Biome } from "#enums/biome";
 import { TrainerType } from "#enums/trainer-type";
 
+export const biomePanelIDs: string[] = [
+  "town",
+  "plains",
+  "grass",
+  "tall_grass",
+  "metropolis",
+  "forest",
+  "sea",
+  "swamp",
+  "beach",
+  "lake",
+  "seabed",
+  "mountain",
+  "badlands",
+  "cave",
+  "desert",
+  "ice_cave",
+  "meadow",
+  "power_plant",
+  "volcano",
+  "graveyard",
+  "dojo",
+  "factory",
+  "ruins",
+  "wasteland",
+  "abyss",
+  "space",
+  "construction_site",
+  "jungle",
+  "fairy_cave",
+  "temple",
+  "slum",
+  "snowy_forest",
+  "",
+  "",
+  "",
+  "",
+  "",
+  "",
+  "",
+  "",
+  "island",
+  "laboratory",
+  "",
+  "",
+  "",
+  "",
+  "",
+  "",
+  "",
+  "",
+  "end"
+]
+export const allpanels: string[] = [
+  "abyss",
+  "badlands",
+  "beach",
+  "cave",
+  "construction_site",
+  //"desert",
+  //"dojo",
+  "end",
+  //"factory",
+  //"fairy_cave",
+  //"forest",
+  //"grass",
+  //"graveyard",
+  //"ice_cave",
+  //"island",
+  //"jungle",
+  //"laboratory",
+  //"lake",
+  //"meadow",
+  //"metropolis",
+  //"mountain",
+  //"plains",
+  //"power_plant",
+  //"ruins",
+  "sea",
+  //"seabed",
+  "slum",
+  //"snowy_forest",
+  "space",
+  //"swamp",
+  //"tall_grass",
+  //"temple",
+  "town",
+  "volcano",
+  "wasteland"
+]
+
 export class LoadingScene extends SceneBase {
   readonly LOAD_EVENTS = Phaser.Loader.Events;
 
@@ -39,7 +130,7 @@ export class LoadingScene extends SceneBase {
 
     this.loadImage("loading_bg", "arenas");
     this.loadImage("logo", "");
-    this.loadImage("pride-update", "events");
+    // this.loadImage("pride-update", "events");
 
     // Load menu images
     this.loadAtlas("bg", "ui");
@@ -52,6 +143,44 @@ export class LoadingScene extends SceneBase {
       for (let w = 1; w <= 5; w++) {
         this.loadImage(`window_${w}${getWindowVariantSuffix(wv)}`, "ui/windows");
       }
+    }
+    //this.loadImage(`abyss_panel`, "ui/windows");
+//    this.loadImage(`badlands_panel`, "ui/windows");
+    //this.loadImage(`beach_panel`, "ui/windows");
+    //this.loadImage(`cave_panel`, "ui/windows");
+    //this.loadImage(`construction_site_panel`, "ui/windows");
+    //this.loadImage(`desert_panel`, "ui/windows");
+    //this.loadImage(`dojo_panel`, "ui/windows");
+//    this.loadImage(`end_panel`, "ui/windows");
+    //this.loadImage(`factory_panel`, "ui/windows");
+    //this.loadImage(`fairy_cave_panel`, "ui/windows");
+    //this.loadImage(`forest_panel`, "ui/windows");
+    //this.loadImage(`grass_panel`, "ui/windows");
+    //this.loadImage(`graveyard_panel`, "ui/windows");
+    //this.loadImage(`ice_cave_panel`, "ui/windows");
+    //this.loadImage(`island_panel`, "ui/windows");
+    //this.loadImage(`jungle_panel`, "ui/windows");
+    //this.loadImage(`laboratory_panel`, "ui/windows");
+    //this.loadImage(`lake_panel`, "ui/windows");
+    //this.loadImage(`meadow_panel`, "ui/windows");
+    //this.loadImage(`metropolis_panel`, "ui/windows");
+    //this.loadImage(`mountain_panel`, "ui/windows");
+    //this.loadImage(`plains_panel`, "ui/windows");
+    //this.loadImage(`power_plant_panel`, "ui/windows");
+     //this.loadImage(`ruins_panel`, "ui/windows");
+//    this.loadImage(`sea_panel`, "ui/windows");
+    //this.loadImage(`seabed_panel`, "ui/windows");
+    //this.loadImage(`slum_panel`, "ui/windows");
+    //this.loadImage(`snowy_forest_panel`, "ui/windows");
+//    this.loadImage(`space_panel`, "ui/windows");
+    //this.loadImage(`swamp_panel`, "ui/windows");
+    //this.loadImage(`tall_grass_panel`, "ui/windows");
+    //this.loadImage(`temple_panel`, "ui/windows");
+    //this.loadImage(`town_panel`, "ui/windows");
+//    this.loadImage(`volcano_panel`, "ui/windows");
+//    this.loadImage(`wasteland_panel`, "ui/windows");
+    for (var i = 0; i < allpanels.length; i++) {
+      this.loadImageNoLegacy(`${allpanels[i]}_panel`, "ui/windows");
     }
     this.loadAtlas("namebox", "ui");
     this.loadImage("pbinfo_player", "ui");
@@ -91,6 +220,7 @@ export class LoadingScene extends SceneBase {
     this.loadImage("shiny_star_small", "ui", "shiny_small.png");
     this.loadImage("shiny_star_small_1", "ui", "shiny_small_1.png");
     this.loadImage("shiny_star_small_2", "ui", "shiny_small_2.png");
+    this.loadImage("passive_bg", "ui", "passive_bg.png");
     this.loadAtlas("shiny_icons", "ui");
     this.loadImage("ha_capsule", "ui", "ha_capsule.png");
     this.loadImage("champion_ribbon", "ui", "champion_ribbon.png");
@@ -145,6 +275,9 @@ export class LoadingScene extends SceneBase {
       this.loadImage(`summary_tabs_${t}`, "ui");
     }
 
+    this.loadImage("scroll_bar", "ui");
+    this.loadImage("scroll_bar_handle", "ui");
+    this.loadImage("starter_container_bg", "ui");
     this.loadImage("starter_select_bg", "ui");
     this.loadImage("select_cursor", "ui");
     this.loadImage("select_cursor_highlight", "ui");
@@ -154,6 +287,8 @@ export class LoadingScene extends SceneBase {
     this.loadImage("select_gen_cursor_highlight", "ui");
 
     this.loadImage("saving_icon", "ui");
+    this.loadImage("discord", "ui");
+    this.loadImage("google", "ui");
 
     this.loadImage("default_bg", "arenas");
     // Load arena images

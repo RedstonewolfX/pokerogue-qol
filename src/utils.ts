@@ -1,5 +1,6 @@
 import i18next from "i18next";
 import { MoneyFormat } from "#enums/money-format";
+import * as LoggerTools from "./logger"
 
 export const MissingTextureKey = "__MISSING";
 
@@ -75,18 +76,22 @@ export function padInt(value: integer, length: integer, padWith?: string): strin
 * @param range The amount of possible numbers
 * @param min The starting number
 */
-export function randInt(range: integer, min: integer = 0): integer {
+export function randInt(range: integer, min: integer = 0, reason?: string): integer {
   if (range === 1) {
     return min;
   }
-  return Math.floor(Math.random() * range) + min;
+  let V = Math.floor(Math.random() * range) + min;
+  //console.log(reason ? reason : "randInt", V)
+  return V;
 }
 
-export function randSeedInt(range: integer, min: integer = 0): integer {
+export function randSeedInt(range: integer, min: integer = 0, reason?: string): integer {
   if (range <= 1) {
     return min;
   }
-  return Phaser.Math.RND.integerInRange(min, (range - 1) + min);
+  let V = Phaser.Math.RND.integerInRange(min, (range - 1) + min);
+  //console.log(reason ? reason : "randSeedInt", V)
+  return V;
 }
 
 /**
@@ -94,26 +99,36 @@ export function randSeedInt(range: integer, min: integer = 0): integer {
 * @param min The lowest number
 * @param max The highest number
 */
-export function randIntRange(min: integer, max: integer): integer {
-  return randInt(max - min, min);
+export function randIntRange(min: integer, max: integer, reason?: string): integer {
+  return randInt(max - min, min, reason ? reason : "randIntRange");
 }
 
-export function randItem<T>(items: T[]): T {
+export function randItem<T>(items: T[], reason?: string): T {
   return items.length === 1
     ? items[0]
-    : items[randInt(items.length)];
+    : items[randInt(items.length, undefined, reason ? reason : "randItem")];
 }
 
-export function randSeedItem<T>(items: T[]): T {
+export function randSeedItem<T>(items: T[], reason?: string): T {
+  function rpick() {
+    let V = Phaser.Math.RND.pick(items)
+    //console.log(reason ? reason : "randSeedItem")
+    return V;
+  }
   return items.length === 1
     ? items[0]
-    : Phaser.Math.RND.pick(items);
+    : rpick();
 }
 
-export function randSeedWeightedItem<T>(items: T[]): T {
+export function randSeedWeightedItem<T>(items: T[], reason?: string): T {
+  function rpick() {
+    let V = Phaser.Math.RND.weightedPick(items);
+    //console.log(reason ? reason : "randSeedWeightedItem")
+    return V;
+  }
   return items.length === 1
     ? items[0]
-    : Phaser.Math.RND.weightedPick(items);
+    : rpick();
 }
 
 export function randSeedEasedWeightedItem<T>(items: T[], easingFunction: string = "Sine.easeIn"): T {
@@ -292,13 +307,25 @@ export const apiUrl = localServerUrl ?? "https://api.pokerogue.net";
 // used to disable api calls when isLocal is true and a server is not found
 export let isLocalServerConnected = true;
 
+export const isBeta = import.meta.env.MODE === "beta"; // this checks to see if the env mode is development. Technically this gives the same value for beta AND for dev envs
+
 export function setCookie(cName: string, cValue: string): void {
   const expiration = new Date();
   expiration.setTime(new Date().getTime() + 3600000 * 24 * 30 * 3/*7*/);
-  document.cookie = `${cName}=${cValue};Secure;SameSite=Strict;Path=/;Expires=${expiration.toUTCString()}`;
+  document.cookie = `${cName}=${cValue};Secure;SameSite=Strict;Domain=${window.location.hostname};Path=/;Expires=${expiration.toUTCString()}`;
+}
+
+export function removeCookie(cName: string): void {
+  document.cookie = `${cName}=;Secure;SameSite=Strict;Domain=${window.location.hostname};Path=/;Max-Age=-1`;
+  document.cookie = `${cName}=;Secure;SameSite=Strict;Path=/;Max-Age=-1`; // legacy cookie without domain, for older cookies to prevent a login loop
 }
 
 export function getCookie(cName: string): string {
+  // check if there are multiple cookies with the same name and delete them
+  if (document.cookie.split(";").filter(c => c.includes(cName)).length > 1) {
+    removeCookie(cName);
+    return "";
+  }
   const name = `${cName}=`;
   const ca = document.cookie.split(";");
   for (let i = 0; i < ca.length; i++) {
@@ -407,6 +434,13 @@ export function formatText(unformattedText: string): string {
   }
 
   return text.join(" ");
+}
+
+export function toCamelCaseString(unformattedText: string): string {
+  if (!unformattedText) {
+    return "";
+  }
+  return unformattedText.split(/[_ ]/).filter(f => f).map((f, i) => i ? `${f[0].toUpperCase()}${f.slice(1).toLowerCase()}` : f.toLowerCase()).join("");
 }
 
 export function rgbToHsv(r: integer, g: integer, b: integer) {
@@ -527,4 +561,24 @@ export function reverseValueToKeySetting(input) {
   return capitalizedWords.join("_");
 }
 
+/**
+ * Capitalize a string.
+ *
+ * @param str - The string to be capitalized.
+ * @param sep - The separator between the words of the string.
+ * @param lowerFirstChar - Whether the first character of the string should be lowercase or not.
+ * @param returnWithSpaces - Whether the returned string should have spaces between the words or not.
+ * @returns The capitalized string.
+ */
+export function capitalizeString(str: string, sep: string, lowerFirstChar: boolean = true, returnWithSpaces: boolean = false) {
+  if (str) {
+    const splitedStr = str.toLowerCase().split(sep);
 
+    for (let i = +lowerFirstChar; i < splitedStr?.length; i++) {
+      splitedStr[i] = splitedStr[i].charAt(0).toUpperCase() + splitedStr[i].substring(1);
+    }
+
+    return returnWithSpaces ? splitedStr.join(" ") : splitedStr.join("");
+  }
+  return null;
+}

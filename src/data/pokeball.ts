@@ -1,14 +1,8 @@
+import { PokeballType } from "#enums/pokeball";
 import BattleScene from "../battle-scene";
 import i18next from "i18next";
 
-export enum PokeballType {
-  POKEBALL,
-  GREAT_BALL,
-  ULTRA_BALL,
-  ROGUE_BALL,
-  MASTER_BALL,
-  LUXURY_BALL
-}
+export { PokeballType };
 
 export const MAX_PER_TYPE_POKEBALLS: integer = 99;
 
@@ -49,6 +43,30 @@ export function getPokeballName(type: PokeballType): string {
     break;
   case PokeballType.LUXURY_BALL:
     ret = i18next.t("pokeball:luxuryBall");
+    break;
+  }
+  return ret;
+}
+export function getPokeballShortName(type: PokeballType): string {
+  let ret: string;
+  switch (type) {
+  case PokeballType.POKEBALL:
+    ret = "Poké";
+    break;
+  case PokeballType.GREAT_BALL:
+    ret = "Great";
+    break;
+  case PokeballType.ULTRA_BALL:
+    ret = "Ultra";
+    break;
+  case PokeballType.ROGUE_BALL:
+    ret = "Rogue";
+    break;
+  case PokeballType.MASTER_BALL:
+    ret = "Master";
+    break;
+  case PokeballType.LUXURY_BALL:
+    ret = "Luxury";
     break;
   }
   return ret;
